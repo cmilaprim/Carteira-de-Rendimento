@@ -57,7 +57,7 @@ class AplicativoCarteira(tk.Tk):
         ttk.Button(botoes, text="Salvar aplicacao", command=self.salvar_aplicacao).pack(side=tk.LEFT, padx=4)
         ttk.Button(botoes, text="Excluir selecionada", command=self.excluir_selecionada).pack(side=tk.LEFT, padx=4)
         ttk.Button(botoes, text="Atualizar CDI/Selic", command=self.atualizar_taxas).pack(side=tk.LEFT, padx=4)
-        ttk.Button(botoes, text="Gerar demonstrativo", command=self.gerar_demonstrativo).pack(side=tk.LEFT, padx=4)
+        ttk.Button(botoes, text="Gerar documento", command=self.gerar_demonstrativo).pack(side=tk.LEFT, padx=4)
 
         lista_frame = ttk.LabelFrame(self, text="Aplicacoes cadastradas")
         lista_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
@@ -122,7 +122,9 @@ class AplicativoCarteira(tk.Tk):
             messagebox.showinfo("Sucesso", "Aplicacao salva com sucesso.")
         except Exception as erro:
             messagebox.showerror("Erro", str(erro))
-
+    
+    
+    
     def carregar_lista(self) -> None:
         for item in self.lista.get_children():
             self.lista.delete(item)
@@ -168,17 +170,23 @@ class AplicativoCarteira(tk.Tk):
 
     def gerar_demonstrativo(self) -> None:
         try:
-            aplicacoes = self.repositorio.listar()
-            if not aplicacoes:
-                messagebox.showwarning("Aviso", "Cadastre pelo menos uma aplicacao.")
+            selecionados = self.lista.selection()
+            if not selecionados:
+                messagebox.showwarning("Aviso", "Selecione uma aplicacao para gerar o documento.")
                 return
+
+            aplicacao = self.repositorio.obter(selecionados[0])
             periodo_inicio = texto_para_data(self.periodo_inicio.get())
             periodo_fim = texto_para_data(self.periodo_fim.get())
             data_saldo = texto_para_data(self.data_saldo.get())
-            demonstrativo = MontadorDemonstrativo().montar(aplicacoes, periodo_inicio, periodo_fim, data_saldo)
-            caminho = RelatorioDemonstrativoCarteiraPDF().gerar(demonstrativo)
+
+            demonstrativo = MontadorDemonstrativo().montar([aplicacao], periodo_inicio, periodo_fim, data_saldo)
+            caminho = RelatorioDemonstrativoCarteiraPDF().gerar_aplicacao(
+                demonstrativo,
+                numero_controle=aplicacao.numero_controle,
+            )
             self.abrir_arquivo(caminho)
-            messagebox.showinfo("Sucesso", f"Demonstrativo gerado:\n{caminho}")
+            messagebox.showinfo("Sucesso", f"Documento da aplicacao gerado:\n{caminho}")
         except Exception as erro:
             messagebox.showerror("Erro", str(erro))
 

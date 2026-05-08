@@ -17,7 +17,7 @@ class ClienteBancoCentral:
                 "dataInicial": inicio.strftime("%d/%m/%Y"),
                 "dataFinal": fim.strftime("%d/%m/%Y"),
             }
-            resposta = requests.get( self.URL_BASE.format(codigo=codigo), params=parametros, timeout=30)
+            resposta = requests.get(self.URL_BASE.format(codigo=codigo), params=parametros, timeout=30)
             resposta.raise_for_status()
             for item in resposta.json():
                 registros.append({

@@ -5,9 +5,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
-
 from app.core.modelos import Aplicacao, Indexador
-
 
 class RepositorioAplicacoes:
     def __init__(self, caminho: str | Path = "data/aplicacoes.json") -> None:
@@ -37,6 +35,12 @@ class RepositorioAplicacoes:
         aplicacoes = [item for item in self.listar() if item.id != aplicacao_id]
         self.salvar_todos(aplicacoes)
 
+    def obter(self, aplicacao_id: str) -> Aplicacao:
+        for aplicacao in self.listar():
+            if aplicacao.id == aplicacao_id:
+                return aplicacao
+        raise KeyError("Aplicacao nao encontrada.")
+
     def atualizar(self, aplicacao: Aplicacao) -> None:
         aplicacoes = self.listar()
         for indice, atual in enumerate(aplicacoes):
@@ -58,7 +62,7 @@ class RepositorioAplicacoes:
             "data_vencimento": aplicacao.data_vencimento.isoformat(),
             "indexador": aplicacao.indexador.value,
             "percentual_indexador": str(aplicacao.percentual_indexador),
-            "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual),
+            "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual)
         }
 
     def para_aplicacao(self, dados: dict) -> Aplicacao:
@@ -72,5 +76,5 @@ class RepositorioAplicacoes:
             data_vencimento=date.fromisoformat(dados["data_vencimento"]),
             indexador=Indexador(dados["indexador"]),
             percentual_indexador=Decimal(str(dados.get("percentual_indexador", "100"))),
-            taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"])),
+            taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"]))
         )

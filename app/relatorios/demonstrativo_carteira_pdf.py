@@ -19,8 +19,44 @@ class RelatorioDemonstrativoCarteiraPDF:
         self.pasta_saida.mkdir(parents=True, exist_ok=True)
 
     def gerar(self, demonstrativo: DemonstrativoCarteira) -> Path:
+        """Gera o demonstrativo completo da carteira, com movimentacao e totais."""
         caminho = self.pasta_saida / f"demonstrativo_carteira_{demonstrativo.data_saldo.isoformat()}.pdf"
-        documento = SimpleDocTemplate(
+        documento = self.criar_documento(caminho)
+        estilos = getSampleStyleSheet()
+        elementos = []
+
+        titulo_mov = f"MOVIMENTACAO DA CARTEIRA ({data_br(demonstrativo.periodo_inicio)} A {data_br(demonstrativo.periodo_fim)})"
+        elementos.append(Paragraph(f"<b>{titulo_mov}</b>", estilos["Normal"]))
+        elementos.append(Spacer(1, 3 * mm))
+        elementos.append(self.tabela_movimentacao(demonstrativo))
+        elementos.append(Spacer(1, 7 * mm))
+
+        titulo_saldo = f"SALDO DA CARTEIRA ({data_br(demonstrativo.data_saldo)})"
+        elementos.append(Paragraph(f"<b>{titulo_saldo}</b>", estilos["Normal"]))
+        elementos.append(Spacer(1, 3 * mm))
+        elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=True))
+
+        documento.build(elementos)
+        return caminho
+
+    def gerar_aplicacao(self, demonstrativo: DemonstrativoCarteira, numero_controle: str = "") -> Path:
+        """Gera um PDF somente com a aplicacao selecionada, sem cabecalho de movimentacao."""
+        identificador = numero_controle.strip().replace("/", "-").replace("\\", "-") or "aplicacao"
+        caminho = self.pasta_saida / f"aplicacao_{identificador}_{demonstrativo.data_saldo.isoformat()}.pdf"
+        documento = self.criar_documento(caminho)
+        estilos = getSampleStyleSheet()
+        elementos = []
+
+        titulo = f"DADOS DA APLICACAO ({data_br(demonstrativo.data_saldo)})"
+        elementos.append(Paragraph(f"<b>{titulo}</b>", estilos["Normal"]))
+        elementos.append(Spacer(1, 3 * mm))
+        elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=False))
+
+        documento.build(elementos)
+        return caminho
+
+    def criar_documento(self, caminho: Path) -> SimpleDocTemplate:
+        return SimpleDocTemplate(
             str(caminho),
             pagesize=landscape(A4),
             leftMargin=8 * mm,
@@ -28,24 +64,8 @@ class RelatorioDemonstrativoCarteiraPDF:
             topMargin=8 * mm,
             bottomMargin=8 * mm,
         )
-        estilos = getSampleStyleSheet()
-        elementos = []
 
-        titulo_mov = f"MOVIMENTACAO DA CARTEIRA ({data_br(demonstrativo.periodo_inicio)} A {data_br(demonstrativo.periodo_fim)})"
-        elementos.append(Paragraph(f"<b>{titulo_mov}</b>", estilos["Normal"]))
-        elementos.append(Spacer(1, 3 * mm))
-        elementos.append(self._tabela_movimentacao(demonstrativo))
-        elementos.append(Spacer(1, 7 * mm))
-
-        titulo_saldo = f"SALDO DA CARTEIRA ({data_br(demonstrativo.data_saldo)})"
-        elementos.append(Paragraph(f"<b>{titulo_saldo}</b>", estilos["Normal"]))
-        elementos.append(Spacer(1, 3 * mm))
-        elementos.append(self._tabela_carteira(demonstrativo))
-
-        documento.build(elementos)
-        return caminho
-
-    def _tabela_movimentacao(self, demonstrativo: DemonstrativoCarteira) -> Table:
+    def tabela_movimentacao(self, demonstrativo: DemonstrativoCarteira) -> Table:
         dados = [
             ["DATA", "OPERACAO", "NUMERO\nDA NOTA", "VALOR\nRESGATE BRUTO", "IMPOSTOS", "LIQUIDO DA OPERACAO", ""],
             ["", "", "", "", "", "VALOR", "D/C"],
@@ -84,7 +104,7 @@ class RelatorioDemonstrativoCarteiraPDF:
         ]))
         return tabela
 
-    def _tabela_carteira(self, demonstrativo: DemonstrativoCarteira) -> Table:
+    def tabela_carteira(self, demonstrativo: DemonstrativoCarteira, mostrar_totais: bool) -> Table:
         dados = [
             ["PRODUTO", "N\u00b0\nCONTROLE", "DATA\nEMISSAO", "DATA\nVCTO", "PRAZO", "TAXA", "VALOR DA\nAPLICACAO", "RENDIMENTO\nBRUTO NO\nPERIODO", "VALOR ATUALIZADO\nNA DATA\n(FLUTUANTE)", "PROJECAO", ""],
             ["", "", "", "", "", "", "", "", "", "IMPOSTOS", "RESGATE LIQ."],
@@ -111,14 +131,16 @@ class RelatorioDemonstrativoCarteiraPDF:
                 percentual(item.rendimento_bruto_percentual),
                 moeda(item.valor_atualizado),
                 "-" if item.impostos == 0 else moeda(item.impostos),
-                moeda(item.resgate_liquido),
+                moeda(item.resgate_liquido)
             ])
 
-        dados.append(["TOTAIS", "", "", "", "", "", moeda(total_aplicado), "", moeda(total_atualizado), moeda(total_impostos), moeda(total_liquido)])
+        if mostrar_totais:
+            dados.append(["TOTAIS", "", "", "", "", "", moeda(total_aplicado), "", moeda(total_atualizado), moeda(total_impostos), moeda(total_liquido)])
+
         ultima_linha = len(dados) - 1
 
         tabela = Table(dados, colWidths=[56*mm, 23*mm, 19*mm, 19*mm, 15*mm, 23*mm, 29*mm, 25*mm, 37*mm, 23*mm, 24*mm], repeatRows=2)
-        tabela.setStyle(TableStyle([
+        estilos = [
             ("SPAN", (9, 0), (10, 0)),
             ("SPAN", (0, 0), (0, 1)),
             ("SPAN", (1, 0), (1, 1)),
@@ -130,16 +152,20 @@ class RelatorioDemonstrativoCarteiraPDF:
             ("SPAN", (7, 0), (7, 1)),
             ("SPAN", (8, 0), (8, 1)),
             ("BACKGROUND", (0, 0), (-1, 1), colors.HexColor("#BFBFBF")),
-            ("BACKGROUND", (0, ultima_linha), (-1, ultima_linha), colors.HexColor("#E6E6E6")),
             ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
             ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
-            ("FONTNAME", (0, ultima_linha), (-1, ultima_linha), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 6.5),
             ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("ALIGN", (0, 2), (0, ultima_linha - 1), "LEFT"),
+            ("ALIGN", (0, 2), (0, ultima_linha), "LEFT"),
             ("ALIGN", (6, 2), (10, ultima_linha), "RIGHT"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.8),
-        ]))
+            ("TOPPADDING", (0, 0), (-1, -1), 1.8)
+        ]
+        if mostrar_totais:
+            estilos.extend([
+                ("BACKGROUND", (0, ultima_linha), (-1, ultima_linha), colors.HexColor("#E6E6E6")),
+                ("FONTNAME", (0, ultima_linha), (-1, ultima_linha), "Helvetica-Bold")
+            ])
+        tabela.setStyle(TableStyle(estilos))
         return tabela
