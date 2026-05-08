@@ -1,6 +1,6 @@
 # Aplicacao de rendimento CDI/Selic
 
-Projeto reestruturado em portugues para calcular aplicacoes pos-fixadas, consultar taxas historicas do Banco Central, salvar cache local em JSON e gerar demonstrativo consolidado da carteira.
+Projeto para calcular aplicacoes pos-fixadas, consultar taxas historicas do Banco Central, salvar cache local em JSON e gerar demonstrativo consolidado da carteira.
 
 ## Ideia principal
 
