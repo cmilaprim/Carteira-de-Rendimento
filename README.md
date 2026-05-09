@@ -1,44 +1,69 @@
-# Aplicacao de rendimento CDI/Selic
+# Carteira de Rendimento
 
-Projeto para calcular aplicacoes pos-fixadas, consultar taxas historicas do Banco Central, salvar cache local em JSON e gerar demonstrativo consolidado da carteira.
+Sistema para calcular, gerenciar e acompanhar aplicações financeiras pós-fixadas indexadas a CDI ou SELIC.
 
-## Ideia principal
+## Funcionalidades
 
-A aplicacao nao guarda mais varias mudancas de Selic/CDI dentro dela.
+- **Cálculo de rendimento** para aplicações indexadas a CDI, SELIC ou com taxa prefixada
+- **Atualização automática de taxas** do Banco Central (via API SGS/BCData)
+- **Cache local** de taxas históricas em JSON para consultas offline
+- **Interface gráfica** para facilitar o cadastro e gestão das aplicações
+- **Geração de demonstrativo** consolidado em PDF
+- **Projeção de rendimento** para datas futuras
 
-Agora a aplicacao guarda apenas a regra contratada:
+## Características
 
-- produto
-- valor aplicado
-- data de emissao
-- data de vencimento
-- indexador: CDI, SELIC ou PREFIXADO
-- percentual do indexador, por exemplo 115% CDI
+A aplicação armazena apenas os dados contratuais das aplicações:
+- Produto e valor aplicado
+- Datas de emissão e vencimento
+- Indexador (CDI, SELIC ou PREFIXADO)
+- Percentual do indexador (ex: 115% CDI)
 
-As taxas historicas ficam em arquivos JSON em `data/taxas/` e podem ser atualizadas pela API SGS/BCData do Banco Central.
+As taxas históricas são mantidas em `data/taxas/` e podem ser atualizadas pela API do Banco Central.
 
-## Como rodar
+## Quick Start
+
+### Instalação
 
 ```bash
 pip install -r requirements.txt
+```
+
+### Executar a aplicação
+
+```bash
 python main.py
 ```
 
-## Como testar
+### Rodar testes
 
 ```bash
 pytest
 ```
 
-## Series usadas do Banco Central
+## Dados do Banco Central
 
-- CDI diario: serie SGS 12
-- Selic diaria: serie SGS 11
+As séries de taxas utilizadas:
+- **CDI diário**: Série SGS 12
+- **SELIC diária**: Série SGS 11
 
-As series sao retornadas em percentual ao dia. Por isso, no calculo, o valor recebido e dividido por 100.
+> Nota: As séries são retornadas em percentual ao dia e são convertidas para cálculos no sistema.
 
-## Observacao importante sobre futuro
+## Importante
 
-Para datas futuras, o Banco Central ainda nao possui taxas diarias publicadas. O sistema permite projetar usando a ultima taxa conhecida quando `projetar_com_ultima_taxa=True`.
+Para datas futuras onde o Banco Central ainda não publicou as taxas diárias, o sistema permite projetar usando a última taxa conhecida (`projetar_com_ultima_taxa=True`). Esta é uma projeção, não um valor oficial.
 
-Isso e uma projecao, nao um valor oficial definitivo.
+## Estrutura do Projeto
+
+```
+app/
+  ├── core/          # Cálculos e lógica principal
+  ├── taxas/         # Integração com Banco Central
+  ├── armazenamento/ # Persistência de dados
+  ├── relatorios/    # Geração de PDFs
+  └── ui/            # Interface gráfica
+data/
+  ├── aplicacoes.json # Dados das aplicações
+  └── taxas/          # Cache de taxas do BCB
+tests/               # Testes unitários
+```
