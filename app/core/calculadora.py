@@ -7,6 +7,8 @@ from app.core.calendario import eh_dia_util_simples, intervalo_datas
 from app.core.impostos import aliquota_iof, aliquota_ir
 from app.core.modelos import Aplicacao, Indexador, PosicaoDiaria
 from app.taxas.servico_taxas import ServicoTaxas
+from datetime import timedelta
+
 
 getcontext().prec = 28
 
@@ -15,7 +17,20 @@ class CalculadoraAplicacao:
     def __init__(self, servico_taxas: ServicoTaxas | None = None) -> None:
         self.servico_taxas = servico_taxas or ServicoTaxas()
 
-    def calcular(self, aplicacao: Aplicacao, data_posicao: date | None = None, projetar_com_ultima_taxa: bool = True, tentar_atualizar_taxas: bool = True,) -> list[PosicaoDiaria]:
+    def buscar_taxa_com_defasagem(self, taxas_por_data: dict[date, Decimal], data_atual: date, defasagem_dias: int = 1) -> tuple[date, Decimal] | None:
+        data_taxa = data_atual - timedelta(days=defasagem_dias)
+
+        menor_data_disponivel = min(taxas_por_data.keys()) if taxas_por_data else None
+
+        while data_taxa not in taxas_por_data:
+            data_taxa -= timedelta(days=1)
+
+            if menor_data_disponivel is not None and data_taxa < menor_data_disponivel:
+                return None
+
+        return data_taxa, taxas_por_data[data_taxa]
+
+    def calcular(self, aplicacao: Aplicacao, data_posicao: date | None = None, projetar_com_ultima_taxa: bool = True, tentar_atualizar_taxas: bool = True) -> list[PosicaoDiaria]:
         aplicacao.validar()
         
         data_final = data_posicao or aplicacao.data_vencimento
@@ -74,18 +89,25 @@ class CalculadoraAplicacao:
 
     def obter_taxa_diaria(self, aplicacao: Aplicacao, data_atual: date, taxas: dict[date, Decimal], ultima_taxa_base_diaria: Decimal | None, projetar_com_ultima_taxa: bool) -> Decimal:
         if aplicacao.indexador == Indexador.PREFIXADO:
+            if not eh_dia_util_simples(data_atual):
+                return Decimal("0")
+
             return self.converter_taxa_anual_para_diaria(aplicacao.taxa_prefixada_anual or Decimal("0"))
 
-        if data_atual in taxas:
-            return taxas[data_atual] / Decimal("100")
+        if data_atual not in taxas:
+            if (projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util_simples(data_atual)):
+                return ultima_taxa_base_diaria
 
-        if not eh_dia_util_simples(data_atual):
             return Decimal("0")
 
-        if projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today():
-            return ultima_taxa_base_diaria
+        resultado_taxa = self.buscar_taxa_com_defasagem(taxas_por_data=taxas, data_atual=data_atual, defasagem_dias=1)
 
-        return Decimal("0")
+        if resultado_taxa is None:
+            return Decimal("0")
+
+        data_taxa_usada, taxa_percentual_dia = resultado_taxa
+
+        return taxa_percentual_dia / Decimal("100")
 
     def converter_taxa_anual_para_diaria(self, taxa_anual_percentual: Decimal) -> Decimal:
         taxa = Decimal(taxa_anual_percentual) / Decimal("100")

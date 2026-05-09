@@ -17,7 +17,7 @@ aplicacoes = [
         data_emissao=date(2026, 4, 30),
         data_vencimento=date(2029, 4, 16),
         indexador=Indexador.CDI,
-        percentual_indexador=Decimal("115"),
+        percentual_indexador=Decimal("115")
     )
 ]
 
@@ -29,7 +29,7 @@ demonstrativo = MontadorDemonstrativo(calculadora).montar(
     aplicacoes=aplicacoes,
     periodo_inicio=date(2026, 4, 1),
     periodo_fim=date(2026, 4, 30),
-    data_saldo=date(2026, 4, 30),
+    data_saldo=date(2026, 4, 30)
 )
 
 caminho_pdf = RelatorioDemonstrativoCarteiraPDF().gerar(demonstrativo)
