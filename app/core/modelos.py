@@ -109,7 +109,8 @@ class LinhaCarteira:
     valor_aplicacao: Decimal
     rendimento_bruto_percentual: Decimal
     valor_atualizado: Decimal
-    impostos: Decimal
+    valor_ir: Decimal
+    valor_iof: Decimal
     resgate_liquido: Decimal
 
 

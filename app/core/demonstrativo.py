@@ -50,7 +50,8 @@ class MontadorDemonstrativo:
                 valor_aplicacao=aplicacao.valor_aplicado,
                 rendimento_bruto_percentual=rendimento_percentual,
                 valor_atualizado=ultima.saldo_bruto,
-                impostos=ultima.valor_iof + ultima.valor_ir,
+                valor_ir=ultima.valor_ir,
+                valor_iof=ultima.valor_iof,
                 resgate_liquido=ultima.saldo_liquido
             ))
 

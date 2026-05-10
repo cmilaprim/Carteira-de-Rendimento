@@ -181,10 +181,7 @@ class AplicativoCarteira(tk.Tk):
             data_saldo = texto_para_data(self.data_saldo.get())
 
             demonstrativo = MontadorDemonstrativo().montar([aplicacao], periodo_inicio, periodo_fim, data_saldo)
-            caminho = RelatorioDemonstrativoCarteiraPDF().gerar_aplicacao(
-                demonstrativo,
-                numero_controle=aplicacao.numero_controle,
-            )
+            caminho = RelatorioDemonstrativoCarteiraPDF().gerar_aplicacao(demonstrativo,numero_controle=aplicacao.numero_controle)
             self.abrir_arquivo(caminho)
             messagebox.showinfo("Sucesso", f"Documento da aplicacao gerado:\n{caminho}")
         except Exception as erro:
