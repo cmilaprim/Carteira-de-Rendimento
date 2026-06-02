@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 data/aplicacoes.json
 data/pdfs/
+build/
+dist/
+.spec

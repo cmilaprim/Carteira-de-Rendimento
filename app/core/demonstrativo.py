@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import date
 from decimal import Decimal
 
 from app.core.calculadora import CalculadoraAplicacao
 from app.core.modelos import Aplicacao, DemonstrativoCarteira, LinhaCarteira, LinhaMovimentacao
+
+logger = logging.getLogger(__name__)
 
 
 class MontadorDemonstrativo:
@@ -12,10 +15,12 @@ class MontadorDemonstrativo:
         self.calculadora = calculadora or CalculadoraAplicacao()
 
     def montar(self, aplicacoes: list[Aplicacao], periodo_inicio: date, periodo_fim: date, data_saldo: date) -> DemonstrativoCarteira:
+        logger.info("Montando demonstrativo: aplicacoes=%d periodo=%s ate %s data_saldo=%s", len(aplicacoes), periodo_inicio, periodo_fim, data_saldo)
         movimentacoes: list[LinhaMovimentacao] = []
         carteira: list[LinhaCarteira] = []
 
         for aplicacao in aplicacoes:
+            logger.debug("Processando aplicacao no demonstrativo: id=%s controle=%s emissao=%s vencimento=%s", aplicacao.id, aplicacao.numero_controle, aplicacao.data_emissao, aplicacao.data_vencimento)
             if periodo_inicio <= aplicacao.data_emissao <= periodo_fim:
                 movimentacoes.append(LinhaMovimentacao(
                     data=aplicacao.data_emissao,
@@ -26,12 +31,15 @@ class MontadorDemonstrativo:
                     valor_liquido_operacao=aplicacao.valor_aplicado,
                     dc="D"
                 ))
+                logger.debug("Movimentacao adicionada para aplicacao %s.", aplicacao.id)
 
             if aplicacao.data_emissao > data_saldo:
+                logger.info("Aplicacao %s ignorada na carteira: emissao=%s posterior a data_saldo=%s", aplicacao.id, aplicacao.data_emissao, data_saldo)
                 continue
 
             posicoes = self.calculadora.calcular(aplicacao, data_posicao=min(data_saldo, aplicacao.data_vencimento))
             if not posicoes:
+                logger.warning("Aplicacao %s nao gerou posicoes para o demonstrativo.", aplicacao.id)
                 continue
             ultima = posicoes[-1]
 
@@ -54,8 +62,10 @@ class MontadorDemonstrativo:
                 valor_iof=ultima.valor_iof,
                 resgate_liquido=ultima.saldo_liquido
             ))
+            logger.debug("Aplicacao %s adicionada na carteira: saldo_bruto=%s saldo_liquido=%s", aplicacao.id, ultima.saldo_bruto, ultima.saldo_liquido)
 
         movimentacoes.sort(key=lambda item: item.data)
         carteira.sort(key=lambda item: (item.produto, item.numero_controle))
 
+        logger.info("Demonstrativo montado: movimentacoes=%d carteira=%d", len(movimentacoes), len(carteira))
         return DemonstrativoCarteira(periodo_inicio=periodo_inicio, periodo_fim=periodo_fim, data_saldo=data_saldo, movimentacoes=movimentacoes, carteira=carteira)

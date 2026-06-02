@@ -10,5 +10,5 @@ def intervalo_datas(inicio: date, fim: date):
         atual += timedelta(days=1)
 
 
-def eh_dia_util_simples(data: date) -> bool:
+def eh_dia_util(data: date) -> bool:
     return data.weekday() < 5

@@ -1,15 +1,14 @@
 from __future__ import annotations
-
+import logging
 from datetime import date, timedelta
 from decimal import Decimal, getcontext
 
-from app.core.calendario import eh_dia_util_simples, intervalo_datas
+from app.core.calendario import eh_dia_util, intervalo_datas
 from app.core.impostos import aliquota_iof, aliquota_ir
 from app.core.modelos import Aplicacao, Indexador, PosicaoDiaria
 from app.taxas.servico_taxas import ServicoTaxas
-from datetime import timedelta
 
-
+logger = logging.getLogger(__name__)
 getcontext().prec = 28
 
 
@@ -19,25 +18,26 @@ class CalculadoraAplicacao:
 
     def buscar_taxa_com_defasagem(self, taxas_por_data: dict[date, Decimal], data_atual: date, defasagem_dias: int = 1) -> tuple[date, Decimal] | None:
         data_taxa = data_atual - timedelta(days=defasagem_dias)
-
         menor_data_disponivel = min(taxas_por_data.keys()) if taxas_por_data else None
-
+        
         while data_taxa not in taxas_por_data:
             data_taxa -= timedelta(days=1)
-
             if menor_data_disponivel is not None and data_taxa < menor_data_disponivel:
+                logger.debug("Nenhuma taxa encontrada com defasagem para a data %s.", data_atual)
                 return None
 
         return data_taxa, taxas_por_data[data_taxa]
 
     def calcular(self, aplicacao: Aplicacao, data_posicao: date | None = None, projetar_com_ultima_taxa: bool = True, tentar_atualizar_taxas: bool = True) -> list[PosicaoDiaria]:
         aplicacao.validar()
-        
         data_final = data_posicao or aplicacao.data_vencimento
+        logger.info("Calculando aplicacao %s: controle=%s indexador=%s emissao=%s data_final=%s", aplicacao.id, aplicacao.numero_controle, aplicacao.indexador.value, aplicacao.data_emissao, data_final)
         if data_final < aplicacao.data_emissao:
+            logger.error("Data de posicao anterior a emissao: aplicacao=%s emissao=%s data_final=%s", aplicacao.id, aplicacao.data_emissao, data_final)
             raise ValueError("A data de posicao nao pode ser anterior a data de emissao.")
 
         taxas = self.servico_taxas.obter_taxas(aplicacao.indexador, aplicacao.data_emissao, data_final, tentar_atualizar=tentar_atualizar_taxas)
+        logger.debug("Taxas disponiveis para calculo da aplicacao %s: %d", aplicacao.id, len(taxas))
         saldo = Decimal(aplicacao.valor_aplicado)
         posicoes: list[PosicaoDiaria] = []
         ultima_taxa_base_diaria: Decimal | None = None
@@ -66,7 +66,7 @@ class CalculadoraAplicacao:
             valor_ir = base_ir * aliq_ir
             rendimento_liquido = base_ir - valor_ir
             saldo_liquido = aplicacao.valor_aplicado + rendimento_liquido
-
+            
             posicoes.append(PosicaoDiaria(
                 data=data_atual,
                 dia_corrido=dia_corrido,
@@ -85,26 +85,36 @@ class CalculadoraAplicacao:
                 saldo_liquido=saldo_liquido,
             ))
 
+        if posicoes:
+            ultima = posicoes[-1]
+            logger.info("Calculo finalizado para aplicacao %s: dias=%d saldo_bruto=%s saldo_liquido=%s", aplicacao.id, len(posicoes), ultima.saldo_bruto, ultima.saldo_liquido)
+        else:
+            logger.warning("Calculo finalizado sem posicoes para aplicacao %s.", aplicacao.id)
         return posicoes
 
     def obter_taxa_diaria(self, aplicacao: Aplicacao, data_atual: date, taxas: dict[date, Decimal], ultima_taxa_base_diaria: Decimal | None, projetar_com_ultima_taxa: bool) -> Decimal:
         if aplicacao.indexador == Indexador.PREFIXADO:
-            if not eh_dia_util_simples(data_atual):
+            if not eh_dia_util(data_atual):
                 return Decimal("0")
 
             return self.converter_taxa_anual_para_diaria(aplicacao.taxa_prefixada_anual or Decimal("0"))
 
         if data_atual not in taxas:
-            if (projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util_simples(data_atual)):
+            if (projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util(data_atual)):
+                logger.debug("Projetando aplicacao %s em %s com ultima taxa diaria conhecida: %s", aplicacao.id, data_atual, ultima_taxa_base_diaria)
                 return ultima_taxa_base_diaria
 
+            if eh_dia_util(data_atual):
+                logger.warning("Taxa %s ausente para dia util %s na aplicacao %s.", aplicacao.indexador.value, data_atual, aplicacao.id)
             return Decimal("0")
 
         resultado_taxa = self.buscar_taxa_com_defasagem(taxas_por_data=taxas, data_atual=data_atual, defasagem_dias=1)
 
         if resultado_taxa is None:
+            logger.warning("Nao foi encontrada taxa com defasagem para %s na aplicacao %s.", data_atual, aplicacao.id)
             return Decimal("0")
-
+        
+        logger.debug("Taxa encontrada para a data %s: %s", data_atual, resultado_taxa)
         data_taxa_usada, taxa_percentual_dia = resultado_taxa
 
         return taxa_percentual_dia / Decimal("100")

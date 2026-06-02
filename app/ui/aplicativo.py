@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 import subprocess
 import sys
 import tkinter as tk
@@ -9,7 +10,7 @@ from tkinter import messagebox, ttk
 
 try:
     from tkcalendar import DateEntry
-except Exception:  # pragma: no cover
+except Exception: 
     DateEntry = None
 
 from app.armazenamento.repositorio_aplicacoes import RepositorioAplicacoes
@@ -20,10 +21,13 @@ from app.core.modelos import Aplicacao, Indexador
 from app.relatorios.demonstrativo_carteira_pdf import RelatorioDemonstrativoCarteiraPDF
 from app.taxas.servico_taxas import ServicoTaxas
 
+logger = logging.getLogger(__name__)
+
 
 class AplicativoCarteira(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
+        logger.info("Iniciando interface da carteira.")
         self.title("Carteira de Aplicacoes - CDI/Selic")
         self.geometry("980x620")
         self.repositorio = RepositorioAplicacoes()
@@ -55,9 +59,15 @@ class AplicativoCarteira(tk.Tk):
         botoes = ttk.Frame(formulario)
         botoes.grid(row=3, column=0, columnspan=6, sticky="w", padx=5, pady=8)
         ttk.Button(botoes, text="Salvar aplicacao", command=self.salvar_aplicacao).pack(side=tk.LEFT, padx=4)
-        ttk.Button(botoes, text="Excluir selecionada", command=self.excluir_selecionada).pack(side=tk.LEFT, padx=4)
+        ttk.Button(botoes, text="Excluir selecionada", command=self.confirmar_exclusao).pack(side=tk.LEFT, padx=4)
         ttk.Button(botoes, text="Atualizar CDI/Selic", command=self.atualizar_taxas).pack(side=tk.LEFT, padx=4)
         ttk.Button(botoes, text="Gerar documento", command=self.gerar_demonstrativo).pack(side=tk.LEFT, padx=4)
+
+        rodape = ttk.LabelFrame(self, text="Periodo do demonstrativo")
+        rodape.pack(fill=tk.X, padx=10, pady=8)
+        self.periodo_inicio = self.entrada_data(rodape, "Inicio", 0, 0)
+        self.periodo_fim = self.entrada_data(rodape, "Fim", 0, 2)
+        self.data_saldo = self.entrada_data(rodape, "Saldo em", 0, 4)
 
         lista_frame = ttk.LabelFrame(self, text="Aplicacoes cadastradas")
         lista_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
@@ -75,12 +85,6 @@ class AplicativoCarteira(tk.Tk):
             self.lista.heading(coluna, text=titulo)
             self.lista.column(coluna, width=largura)
         self.lista.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        rodape = ttk.LabelFrame(self, text="Periodo do demonstrativo")
-        rodape.pack(fill=tk.X, padx=10, pady=8)
-        self.periodo_inicio = self.entrada_data(rodape, "Inicio", 0, 0)
-        self.periodo_fim = self.entrada_data(rodape, "Fim", 0, 2)
-        self.data_saldo = self.entrada_data(rodape, "Saldo em", 0, 4)
 
     def entrada(self, pai, rotulo: str, linha: int, coluna: int, largura: int = 20) -> ttk.Entry:
         ttk.Label(pai, text=rotulo).grid(row=linha, column=coluna, sticky="w", padx=5, pady=4)
@@ -100,6 +104,7 @@ class AplicativoCarteira(tk.Tk):
 
     def salvar_aplicacao(self) -> None:
         try:
+            logger.info("Solicitacao de cadastro de aplicacao recebida.")
             indexador = Indexador(self.indexador.get())
             taxa_prefixada = None
             if indexador == Indexador.PREFIXADO:
@@ -114,28 +119,39 @@ class AplicativoCarteira(tk.Tk):
                 data_vencimento=texto_para_data(self.data_vencimento.get()),
                 indexador=indexador,
                 percentual_indexador=texto_para_decimal(self.percentual_indexador.get()),
-                taxa_prefixada_anual=taxa_prefixada,
+                taxa_prefixada_anual=taxa_prefixada
             )
+            logger.info("Salvando aplicacao %s: produto=%s controle=%s indexador=%s valor=%s emissao=%s vencimento=%s",
+                aplicacao.id,
+                aplicacao.nome_produto,
+                aplicacao.numero_controle,
+                aplicacao.indexador.value,
+                aplicacao.valor_aplicado,
+                aplicacao.data_emissao,
+                aplicacao.data_vencimento)
             self.repositorio.adicionar(aplicacao)
             self.limpar_formulario()
             self.carregar_lista()
+            logger.info("Aplicacao %s salva com sucesso.", aplicacao.id)
             messagebox.showinfo("Sucesso", "Aplicacao salva com sucesso.")
         except Exception as erro:
+            logger.exception("Erro ao salvar aplicacao.")
             messagebox.showerror("Erro", str(erro))
-    
     
     
     def carregar_lista(self) -> None:
         for item in self.lista.get_children():
             self.lista.delete(item)
-        for aplicacao in self.repositorio.listar():
+        aplicacoes = self.repositorio.listar()
+        logger.debug("Carregando lista de aplicacoes na tela: total=%d", len(aplicacoes))
+        for aplicacao in aplicacoes:
             self.lista.insert("", tk.END, iid=aplicacao.id, values=(
                 aplicacao.nome_produto,
                 aplicacao.numero_controle,
                 data_br(aplicacao.data_emissao),
                 data_br(aplicacao.data_vencimento),
                 aplicacao.rotulo_taxa,
-                moeda_com_simbolo(aplicacao.valor_aplicado),
+                moeda_com_simbolo(aplicacao.valor_aplicado)
             ))
 
     def limpar_formulario(self) -> None:
@@ -145,33 +161,47 @@ class AplicativoCarteira(tk.Tk):
         self.percentual_indexador.insert(0, "100")
         self.indexador.set(Indexador.CDI.value)
 
+    def confirmar_exclusao(self) -> None:
+        if messagebox.askyesno("Confirmar exclusao", "Deseja realmente excluir a aplicacao selecionada?"):
+            self.excluir_selecionada()
+
     def excluir_selecionada(self) -> None:
         selecionados = self.lista.selection()
         if not selecionados:
+            logger.warning("Exclusao solicitada sem aplicacao selecionada.")
             messagebox.showwarning("Aviso", "Selecione uma aplicacao.")
             return
+        logger.info("Excluindo aplicacao selecionada: %s", selecionados[0])
         self.repositorio.excluir(selecionados[0])
         self.carregar_lista()
+        logger.info("Aplicacao excluida com sucesso: %s", selecionados[0])
 
     def atualizar_taxas(self) -> None:
         try:
+            logger.info("Solicitacao de atualizacao de taxas recebida.")
             inicio = texto_para_data(self.periodo_inicio.get())
             fim = texto_para_data(self.periodo_fim.get())
             hoje = date.today()
             fim_busca = min(fim, hoje)
             if inicio > fim_busca:
+                logger.info("Atualizacao de taxas ignorada: inicio=%s fim_busca=%s", inicio, fim_busca)
                 messagebox.showinfo("Info", "Nao ha periodo historico para atualizar.")
                 return
+            logger.info("Atualizando CDI/Selic de %s ate %s.", inicio, fim_busca)
             self.servico_taxas.atualizar(Indexador.CDI, inicio, fim_busca)
             self.servico_taxas.atualizar(Indexador.SELIC, inicio, fim_busca)
+            logger.info("Taxas CDI/Selic atualizadas com sucesso.")
             messagebox.showinfo("Sucesso", "Taxas CDI/Selic atualizadas e salvas em JSON.")
         except Exception as erro:
+            logger.exception("Erro ao atualizar taxas CDI/Selic.")
             messagebox.showerror("Erro ao atualizar taxas", str(erro))
 
     def gerar_demonstrativo(self) -> None:
         try:
+            logger.info("Solicitacao de geracao de demonstrativo recebida.")
             selecionados = self.lista.selection()
             if not selecionados:
+                logger.warning("Geracao de demonstrativo solicitada sem aplicacao selecionada.")
                 messagebox.showwarning("Aviso", "Selecione uma aplicacao para gerar o documento.")
                 return
 
@@ -179,16 +209,24 @@ class AplicativoCarteira(tk.Tk):
             periodo_inicio = texto_para_data(self.periodo_inicio.get())
             periodo_fim = texto_para_data(self.periodo_fim.get())
             data_saldo = texto_para_data(self.data_saldo.get())
+            logger.info("Gerando demonstrativo da aplicacao %s: periodo=%s ate %s saldo=%s", aplicacao.numero_controle,
+                periodo_inicio,
+                periodo_fim,
+                data_saldo
+            )
 
             demonstrativo = MontadorDemonstrativo().montar([aplicacao], periodo_inicio, periodo_fim, data_saldo)
             caminho = RelatorioDemonstrativoCarteiraPDF().gerar_aplicacao(demonstrativo,numero_controle=aplicacao.numero_controle)
+            logger.info("Demonstrativo gerado com sucesso: %s", caminho)
             self.abrir_arquivo(caminho)
             messagebox.showinfo("Sucesso", f"Documento da aplicacao gerado:\n{caminho}")
         except Exception as erro:
+            logger.exception("Erro ao gerar demonstrativo.")
             messagebox.showerror("Erro", str(erro))
 
     def abrir_arquivo(self, caminho) -> None:
         caminho = os.path.abspath(str(caminho))
+        logger.info("Abrindo arquivo: %s", caminho)
         if sys.platform.startswith("win"):
             os.startfile(caminho)  
         elif sys.platform == "darwin":
