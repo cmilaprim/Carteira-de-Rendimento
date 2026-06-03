@@ -5,4 +5,5 @@ data/aplicacoes.json
 data/pdfs/
 build/
 dist/
-.spec
+*.spec
+*.log
