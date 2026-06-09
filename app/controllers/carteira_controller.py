@@ -36,7 +36,7 @@ class CarteiraController:
         if indexador == Indexador.PREFIXADO:
             taxa_prefixada = texto_para_decimal(dados.taxa_prefixada)
 
-        aplicacao = Aplicacao.criar(nome_produto=dados.nome_produto, numero_controle=dados.numero_controle, numero_nota=dados.numero_nota, valor_aplicado=texto_para_decimal(dados.valor_aplicado), data_emissao=texto_para_data(dados.data_emissao), data_vencimento=texto_para_data(dados.data_vencimento), indexador=indexador, ercentual_indexador=texto_para_decimal(dados.percentual_indexador), taxa_prefixada_anual=taxa_prefixada)
+        aplicacao = Aplicacao.criar(nome_produto=dados.nome_produto, numero_controle=dados.numero_controle, numero_nota=dados.numero_nota, valor_aplicado=texto_para_decimal(dados.valor_aplicado), data_emissao=texto_para_data(dados.data_emissao), data_vencimento=texto_para_data(dados.data_vencimento), indexador=indexador, percentual_indexador=texto_para_decimal(dados.percentual_indexador), taxa_prefixada_anual=taxa_prefixada)
 
         logger.info("Salvando aplicacao %s: produto=%s controle=%s indexador=%s valor=%s emissao=%s vencimento=%s", aplicacao.id, aplicacao.nome_produto, aplicacao.numero_controle, aplicacao.indexador.value, aplicacao.valor_aplicado, aplicacao.data_emissao, aplicacao.data_vencimento)
         
