@@ -41,10 +41,7 @@ def cria_logger(nome_arquivo=None, limpar=True):
     logger.handlers.clear()
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter(
-        "[%(levelname)s] %(asctime)s | %(filename)s | %(funcName)s | %(message)s",
-        datefmt="%d/%m/%Y %H:%M:%S",
-    )
+    formatter = logging.Formatter("[%(levelname)s] %(asctime)s | %(filename)s | %(funcName)s | %(message)s", datefmt="%d/%m/%Y %H:%M:%S")
 
     handler_console = logging.StreamHandler()
     handler_console.setFormatter(formatter)

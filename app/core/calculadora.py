@@ -82,7 +82,7 @@ class CalculadoraAplicacao:
                 aliquota_ir=aliq_ir,
                 valor_ir=valor_ir,
                 rendimento_liquido=rendimento_liquido,
-                saldo_liquido=saldo_liquido,
+                saldo_liquido=saldo_liquido
             ))
 
         if posicoes:
@@ -99,8 +99,11 @@ class CalculadoraAplicacao:
 
             return self.converter_taxa_anual_para_diaria(aplicacao.taxa_prefixada_anual or Decimal("0"))
 
-        if data_atual not in taxas:
-            if (projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util(data_atual)):
+        maior_data_disponivel = max(taxas.keys()) if taxas else None
+        pode_usar_defasagem = data_atual in taxas or (maior_data_disponivel is not None and data_atual > maior_data_disponivel and data_atual <= date.today())
+
+        if not pode_usar_defasagem:
+            if projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util(data_atual):
                 logger.debug("Projetando aplicacao %s em %s com ultima taxa diaria conhecida: %s", aplicacao.id, data_atual, ultima_taxa_base_diaria)
                 return ultima_taxa_base_diaria
 

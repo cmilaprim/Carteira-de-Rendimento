@@ -5,8 +5,8 @@ from datetime import date
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
-
-
+from typing import Protocol
+from pathlib import Path
 class Indexador(str, Enum):
     CDI = "CDI"
     SELIC = "SELIC"
@@ -38,7 +38,7 @@ class Aplicacao:
             data_vencimento=data_vencimento,
             indexador=Indexador(indexador),
             percentual_indexador=Decimal(percentual_indexador),
-            taxa_prefixada_anual=taxa_prefixada_anual,
+            taxa_prefixada_anual=taxa_prefixada_anual
         )
         aplicacao.validar()
         return aplicacao
@@ -116,8 +116,35 @@ class LinhaCarteira:
 
 @dataclass(frozen=True)
 class DemonstrativoCarteira:
-    periodo_inicio: date
-    periodo_fim: date
     data_saldo: date
     movimentacoes: list[LinhaMovimentacao] = field(default_factory=list)
     carteira: list[LinhaCarteira] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DadosAplicacaoFormulario:
+    nome_produto: str
+    numero_controle: str
+    numero_nota: str
+    valor_aplicado: str
+    data_emissao: str
+    data_vencimento: str
+    indexador: str
+    percentual_indexador: str
+    taxa_prefixada: str
+
+
+@dataclass(frozen=True)
+class LinhaAplicacaoLista:
+    id: str
+    produto: str
+    controle: str
+    emissao: str
+    vencimento: str
+    taxa: str
+    valor: str
+
+
+class RelatorioAplicacao(Protocol):
+    def gerar_aplicacao(self, demonstrativo, numero_controle: str = "") -> Path:
+        ...

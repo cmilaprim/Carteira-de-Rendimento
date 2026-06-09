@@ -14,14 +14,14 @@ class MontadorDemonstrativo:
     def __init__(self, calculadora: CalculadoraAplicacao | None = None) -> None:
         self.calculadora = calculadora or CalculadoraAplicacao()
 
-    def montar(self, aplicacoes: list[Aplicacao], periodo_inicio: date, periodo_fim: date, data_saldo: date) -> DemonstrativoCarteira:
-        logger.info("Montando demonstrativo: aplicacoes=%d periodo=%s ate %s data_saldo=%s", len(aplicacoes), periodo_inicio, periodo_fim, data_saldo)
+    def montar(self, aplicacoes: list[Aplicacao], data_saldo: date) -> DemonstrativoCarteira:
+        logger.info("Montando demonstrativo: aplicacoes=%d data_saldo=%s", len(aplicacoes), data_saldo)
         movimentacoes: list[LinhaMovimentacao] = []
         carteira: list[LinhaCarteira] = []
 
         for aplicacao in aplicacoes:
             logger.debug("Processando aplicacao no demonstrativo: id=%s controle=%s emissao=%s vencimento=%s", aplicacao.id, aplicacao.numero_controle, aplicacao.data_emissao, aplicacao.data_vencimento)
-            if periodo_inicio <= aplicacao.data_emissao <= periodo_fim:
+            if aplicacao.data_emissao <= data_saldo:
                 movimentacoes.append(LinhaMovimentacao(
                     data=aplicacao.data_emissao,
                     operacao="Aplicacao",
@@ -68,4 +68,4 @@ class MontadorDemonstrativo:
         carteira.sort(key=lambda item: (item.produto, item.numero_controle))
 
         logger.info("Demonstrativo montado: movimentacoes=%d carteira=%d", len(movimentacoes), len(carteira))
-        return DemonstrativoCarteira(periodo_inicio=periodo_inicio, periodo_fim=periodo_fim, data_saldo=data_saldo, movimentacoes=movimentacoes, carteira=carteira)
+        return DemonstrativoCarteira(data_saldo=data_saldo, movimentacoes=movimentacoes, carteira=carteira)

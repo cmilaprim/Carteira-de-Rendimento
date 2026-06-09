@@ -28,7 +28,7 @@ class RelatorioDemonstrativoCarteiraPDF:
         estilos = getSampleStyleSheet()
         elementos = []
 
-        titulo_mov = f"MOVIMENTACAO DA CARTEIRA ({data_br(demonstrativo.periodo_inicio)} A {data_br(demonstrativo.periodo_fim)})"
+        titulo_mov = "MOVIMENTACAO DA CARTEIRA"
         elementos.append(Paragraph(f"<b>{titulo_mov}</b>", estilos["Normal"]))
         elementos.append(Spacer(1, 3 * mm))
         elementos.append(self.tabela_movimentacao(demonstrativo))
@@ -66,8 +66,8 @@ class RelatorioDemonstrativoCarteiraPDF:
     def tabela_movimentacao(self, demonstrativo: DemonstrativoCarteira) -> Table:
         logger.debug("Montando tabela de movimentacao: linhas=%d", len(demonstrativo.movimentacoes))
         dados = [
-            ["DATA", "OPERACAO", "NUMERO\nDA NOTA", "VALOR\nRESGATE BRUTO", "IMPOSTO", "IOF", "LIQUIDO DA OPERACAO", ""],
-            ["", "", "", "", "", "D/C"],
+            ["DATA", "OPERACAO", "NUMERO\nDA NOTA", "VALOR\nRESGATE BRUTO", "IMPOSTOS", "LIQUIDO DA OPERACAO", "D/C"],
+            ["", "", "", "", "", "", ""],
         ]
         for item in demonstrativo.movimentacoes:
             dados.append([
@@ -75,35 +75,30 @@ class RelatorioDemonstrativoCarteiraPDF:
                 item.operacao,
                 item.numero_nota,
                 moeda(item.valor_resgate_bruto),
-                "-" if item.valor_ir == 0 else moeda(item.valor_ir),
-                moeda(item.valor_iof),
+                "-" if item.impostos == 0 else moeda(item.impostos),
                 moeda(item.valor_liquido_operacao),
                 item.dc
             ])
         if len(dados) == 2:
-            dados.append(["-", "Sem movimentacao no periodo", "", "", "", "", ""])
+            dados.append(["-", "Sem movimentacao", "", "", "", "", ""])
 
         tabela = Table(dados, colWidths=[
-                                42*mm,  # produto
-                                18*mm,  # controle
-                                16*mm,  # emissao
-                                16*mm,  # vencimento
-                                12*mm,  # prazo
-                                20*mm,  # taxa
-                                25*mm,  # valor aplicacao
-                                22*mm,  # rendimento
-                                30*mm,  # valor atualizado
-                                16*mm,  # IR
-                                16*mm,  # IOF
-                                22*mm   # resgate liquido
+                                24*mm,  # data
+                                35*mm,  # operacao
+                                30*mm,  # nota
+                                36*mm,  # valor bruto
+                                30*mm,  # impostos
+                                40*mm,  # valor liquido
+                                14*mm   # D/C
                             ], repeatRows=2)
         tabela.setStyle(TableStyle([
-            ("SPAN", (5, 0), (6, 0)),
             ("SPAN", (0, 0), (0, 1)),
             ("SPAN", (1, 0), (1, 1)),
             ("SPAN", (2, 0), (2, 1)),
             ("SPAN", (3, 0), (3, 1)),
             ("SPAN", (4, 0), (4, 1)),
+            ("SPAN", (5, 0), (5, 1)),
+            ("SPAN", (6, 0), (6, 1)),
             ("BACKGROUND", (0, 0), (-1, 1), colors.HexColor("#BFBFBF")),
             ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
             ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
