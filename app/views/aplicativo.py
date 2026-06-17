@@ -24,43 +24,81 @@ class AplicativoCarteira(tk.Tk):
         self.carregar_lista()
 
     def montar_tela(self) -> None:
-        formulario = ttk.LabelFrame(self, text="Nova aplicacao")
+        notebook = ttk.Notebook(self)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+
+        aba_aplicacoes = ttk.Frame(notebook)
+        notebook.add(aba_aplicacoes, text="  Aplicacoes  ")
+        self.montar_aba_aplicacoes(aba_aplicacoes)
+
+        aba_bancos = ttk.Frame(notebook)
+        notebook.add(aba_bancos, text="  Bancos  ")
+        self.montar_aba_bancos(aba_bancos)
+
+    # ── Aba Aplicações ────────────────────────────────────────────────────────
+
+    def montar_aba_aplicacoes(self, pai) -> None:
+        formulario = ttk.LabelFrame(pai, text="Nova aplicacao")
         formulario.pack(fill=tk.X, padx=14, pady=(14, 6))
 
-        for i in range(6):
+        for i in range(8):
             formulario.columnconfigure(i, weight=1)
 
-        self.nome_produto = self.campo(formulario, "Produto", 0, 0, largura=30)
-        self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 2, largura=18)
+        # Linha 0: Produto | Valor | Tipo | Banco
+        self.nome_produto = self.campo(formulario, "Produto", 0, 0, largura=28)
+        self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 2, largura=16)
 
         ttk.Label(formulario, text="Tipo").grid(row=0, column=4, sticky="w", padx=(10, 4), pady=6)
         opcoes_tipo = self.controller.tipos_produto()
-        self.tipo_produto = ttk.Combobox(formulario, values=opcoes_tipo, state="readonly", width=16)
+        self.tipo_produto = ttk.Combobox(formulario, values=opcoes_tipo, state="readonly", width=14)
         self.tipo_produto.set(opcoes_tipo[0])
-        self.tipo_produto.grid(row=0, column=5, sticky="ew", padx=(4, 14), pady=6)
+        self.tipo_produto.grid(row=0, column=5, sticky="ew", padx=(4, 10), pady=6)
 
+        ttk.Label(formulario, text="Banco").grid(row=0, column=6, sticky="w", padx=(10, 4), pady=6)
+        self.banco_aplicacao = ttk.Combobox(formulario, values=[], state="readonly", width=14)
+        self.banco_aplicacao.grid(row=0, column=7, sticky="ew", padx=(4, 14), pady=6)
+
+        # Linha 1: Emissao | Vencimento | Indexador
         self.data_emissao = self.campo_data(formulario, "Emissao", 1, 0)
         self.data_vencimento = self.campo_data(formulario, "Vencimento", 1, 2)
 
         ttk.Label(formulario, text="Indexador").grid(row=1, column=4, sticky="w", padx=(10, 4), pady=6)
         opcoes_indexadores = self.controller.indexadores()
-        self.indexador = ttk.Combobox(formulario, values=opcoes_indexadores, state="readonly", width=16)
+        self.indexador = ttk.Combobox(formulario, values=opcoes_indexadores, state="readonly", width=14)
         self.indexador.set(opcoes_indexadores[0])
-        self.indexador.grid(row=1, column=5, sticky="ew", padx=(4, 14), pady=6)
+        self.indexador.grid(row=1, column=5, sticky="ew", padx=(4, 10), pady=6)
+        self.indexador.bind("<<ComboboxSelected>>", self.ao_mudar_indexador)
 
-        self.percentual_indexador = self.campo(formulario, "% indexador", 2, 0, largura=12)
+        # Linha 2: % indexador | Taxa/Spread | Salvar (colspan 4)
+        self.label_percentual = ttk.Label(formulario, text="% indexador")
+        self.label_percentual.grid(row=2, column=0, sticky="w", padx=(10, 4), pady=6)
+        self.percentual_indexador = ttk.Entry(formulario, width=12)
+        self.percentual_indexador.grid(row=2, column=1, sticky="ew", padx=(4, 10), pady=6)
         self.percentual_indexador.insert(0, "100")
-        self.taxa_prefixada = self.campo(formulario, "Taxa a.a.", 2, 2, largura=12)
+
+        self.label_taxa = ttk.Label(formulario, text="Taxa a.a.")
+        self.label_taxa.grid(row=2, column=2, sticky="w", padx=(10, 4), pady=6)
+        self.taxa_prefixada = ttk.Entry(formulario, width=12, state="disabled")
+        self.taxa_prefixada.grid(row=2, column=3, sticky="ew", padx=(4, 10), pady=6)
 
         ttk.Button(formulario, text="Salvar aplicacao", command=self.salvar_aplicacao).grid(
-            row=2, column=4, columnspan=2, sticky="ew", padx=(10, 14), pady=6)
+            row=2, column=4, columnspan=4, sticky="ew", padx=(10, 14), pady=6)
 
-        acoes = ttk.Frame(self)
+        # Barra de ações
+        acoes = ttk.Frame(pai)
         acoes.pack(fill=tk.X, padx=14, pady=6)
 
         ttk.Label(acoes, text="Saldo em:").pack(side=tk.LEFT, padx=(0, 6))
         self.data_saldo = DateEntry(acoes, date_pattern="dd/mm/yyyy", width=12)
         self.data_saldo.pack(side=tk.LEFT)
+
+        ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
+
+        ttk.Label(acoes, text="Banco:").pack(side=tk.LEFT, padx=(0, 4))
+        self.filtro_banco = ttk.Combobox(acoes, values=["Todos"], state="readonly", width=16)
+        self.filtro_banco.set("Todos")
+        self.filtro_banco.pack(side=tk.LEFT)
+        self.filtro_banco.bind("<<ComboboxSelected>>", lambda _e: self.carregar_lista())
 
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
 
@@ -73,19 +111,21 @@ class AplicativoCarteira(tk.Tk):
         ttk.Button(acoes, text="Gerar PDF", command=self.gerar_carteira_completa).pack(side=tk.LEFT, padx=3)
         ttk.Button(acoes, text="Exportar Excel", command=self.exportar_excel).pack(side=tk.LEFT, padx=3)
 
-        lista_frame = ttk.LabelFrame(self, text="Aplicacoes cadastradas")
+        # Lista de aplicações
+        lista_frame = ttk.LabelFrame(pai, text="Aplicacoes cadastradas")
         lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 14))
 
-        colunas = ("produto", "tipo", "emissao", "vencimento", "taxa", "valor", "resgate")
+        colunas = ("produto", "banco", "tipo", "emissao", "vencimento", "taxa", "valor", "resgate")
         self.lista = ttk.Treeview(lista_frame, columns=colunas, show="headings", selectmode="extended")
         for coluna, titulo, largura in [
-            ("produto", "Produto", 300),
-            ("tipo", "Tipo", 110),
-            ("emissao", "Emissao", 90),
-            ("vencimento", "Vencimento", 90),
+            ("produto", "Produto", 220),
+            ("banco", "Banco", 120),
+            ("tipo", "Tipo", 100),
+            ("emissao", "Emissao", 88),
+            ("vencimento", "Vencimento", 88),
             ("taxa", "Taxa", 120),
-            ("valor", "Valor", 130),
-            ("resgate", "Resgate", 90),
+            ("valor", "Valor", 120),
+            ("resgate", "Resgate", 88),
         ]:
             self.lista.heading(coluna, text=titulo)
             self.lista.column(coluna, width=largura, minwidth=60)
@@ -96,6 +136,39 @@ class AplicativoCarteira(tk.Tk):
 
         self.lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
+
+        self.atualizar_opcoes_banco()
+
+    # ── Aba Bancos ────────────────────────────────────────────────────────────
+
+    def montar_aba_bancos(self, pai) -> None:
+        form = ttk.LabelFrame(pai, text="Novo banco")
+        form.pack(fill=tk.X, padx=14, pady=(14, 6))
+        form.columnconfigure(1, weight=1)
+
+        ttk.Label(form, text="Nome do banco").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=10)
+        self.nome_banco = ttk.Entry(form, width=30)
+        self.nome_banco.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=10)
+        self.nome_banco.bind("<Return>", lambda _e: self.adicionar_banco())
+        ttk.Button(form, text="Adicionar", command=self.adicionar_banco).grid(
+            row=0, column=2, sticky="ew", padx=(4, 14), pady=10)
+
+        lista_frame = ttk.LabelFrame(pai, text="Bancos cadastrados")
+        lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 14))
+
+        self.lista_bancos = tk.Listbox(lista_frame, selectmode="single", font=("Segoe UI", 10), activestyle="none")
+        scrollbar_bancos = ttk.Scrollbar(lista_frame, orient="vertical", command=self.lista_bancos.yview)
+        self.lista_bancos.configure(yscrollcommand=scrollbar_bancos.set)
+
+        self.lista_bancos.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
+        scrollbar_bancos.pack(side=tk.LEFT, fill=tk.Y, pady=6)
+
+        ttk.Button(lista_frame, text="Remover selecionado", command=self.remover_banco).pack(
+            side=tk.LEFT, padx=14, pady=6, anchor="n")
+
+        self.carregar_bancos()
+
+    # ── Helpers de formulário ─────────────────────────────────────────────────
 
     def campo(self, pai, rotulo: str, linha: int, coluna: int, largura: int = 20) -> ttk.Entry:
         ttk.Label(pai, text=rotulo).grid(row=linha, column=coluna, sticky="w", padx=(10, 4), pady=6)
@@ -109,6 +182,23 @@ class AplicativoCarteira(tk.Tk):
         entrada.grid(row=linha, column=coluna + 1, sticky="w", padx=(4, 10), pady=6)
         return entrada
 
+    def ao_mudar_indexador(self, _event=None) -> None:
+        idx = self.indexador.get()
+        if idx == "PREFIXADO":
+            self.percentual_indexador.configure(state="disabled")
+            self.label_taxa.configure(text="Taxa a.a.")
+            self.taxa_prefixada.configure(state="normal")
+        elif idx == "SELIC+":
+            self.percentual_indexador.configure(state="disabled")
+            self.label_taxa.configure(text="Spread a.a.")
+            self.taxa_prefixada.configure(state="normal")
+        else:
+            self.percentual_indexador.configure(state="normal")
+            self.label_taxa.configure(text="Taxa a.a.")
+            self.taxa_prefixada.configure(state="disabled")
+
+    # ── Ações sobre aplicações ────────────────────────────────────────────────
+
     def salvar_aplicacao(self) -> None:
         try:
             self.controller.salvar_aplicacao(DadosAplicacaoFormulario(
@@ -119,7 +209,9 @@ class AplicativoCarteira(tk.Tk):
                 indexador=self.indexador.get(),
                 percentual_indexador=self.percentual_indexador.get(),
                 taxa_prefixada=self.taxa_prefixada.get(),
-                tipo_produto=self.tipo_produto.get()))
+                tipo_produto=self.tipo_produto.get(),
+                banco=self.banco_aplicacao.get(),
+            ))
             self.limpar_formulario()
             self.carregar_lista()
             messagebox.showinfo("Sucesso", "Aplicacao salva com sucesso.")
@@ -130,20 +222,27 @@ class AplicativoCarteira(tk.Tk):
     def carregar_lista(self) -> None:
         for item in self.lista.get_children():
             self.lista.delete(item)
+        banco_filtro = self.filtro_banco.get()
         for linha in self.controller.listar_aplicacoes():
+            if banco_filtro != "Todos" and linha.banco != banco_filtro:
+                continue
             tags = ("resgatada",) if linha.resgate != "-" else ()
             self.lista.insert("", tk.END, iid=linha.id, values=(
-                linha.produto, linha.tipo, linha.emissao,
+                linha.produto, linha.banco, linha.tipo, linha.emissao,
                 linha.vencimento, linha.taxa, linha.valor, linha.resgate,
             ), tags=tags)
 
     def limpar_formulario(self) -> None:
+        self.taxa_prefixada.configure(state="normal")
         for entrada in [self.nome_produto, self.valor_aplicado, self.taxa_prefixada]:
             entrada.delete(0, tk.END)
+        self.percentual_indexador.configure(state="normal")
         self.percentual_indexador.delete(0, tk.END)
         self.percentual_indexador.insert(0, "100")
         self.indexador.set(self.controller.indexadores()[0])
         self.tipo_produto.set(self.controller.tipos_produto()[0])
+        self.banco_aplicacao.set("")
+        self.ao_mudar_indexador()
 
     def selecionar_todas(self) -> None:
         self.lista.selection_set(self.lista.get_children())
@@ -209,3 +308,40 @@ class AplicativoCarteira(tk.Tk):
         except Exception as erro:
             self.logger.exception("Erro ao gerar relatorio da carteira.")
             messagebox.showerror("Erro", str(erro))
+
+    # ── Ações sobre bancos ────────────────────────────────────────────────────
+
+    def carregar_bancos(self) -> None:
+        self.lista_bancos.delete(0, tk.END)
+        bancos = self.controller.listar_bancos()
+        for banco in bancos:
+            self.lista_bancos.insert(tk.END, banco)
+        self.atualizar_opcoes_banco(bancos)
+
+    def atualizar_opcoes_banco(self, bancos: list[str] | None = None) -> None:
+        if bancos is None:
+            bancos = self.controller.listar_bancos()
+        opcoes = ["Todos"] + bancos
+        self.filtro_banco["values"] = opcoes
+        if self.filtro_banco.get() not in opcoes:
+            self.filtro_banco.set("Todos")
+        self.banco_aplicacao["values"] = bancos
+
+    def adicionar_banco(self) -> None:
+        nome = self.nome_banco.get().strip()
+        if not nome:
+            messagebox.showwarning("Aviso", "Informe o nome do banco.")
+            return
+        self.controller.adicionar_banco(nome)
+        self.nome_banco.delete(0, tk.END)
+        self.carregar_bancos()
+
+    def remover_banco(self) -> None:
+        selecao = self.lista_bancos.curselection()
+        if not selecao:
+            messagebox.showwarning("Aviso", "Selecione um banco.")
+            return
+        nome = self.lista_bancos.get(selecao[0])
+        if messagebox.askyesno("Confirmar", f"Remover o banco '{nome}'?"):
+            self.controller.remover_banco(nome)
+            self.carregar_bancos()

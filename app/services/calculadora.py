@@ -34,7 +34,8 @@ class CalculadoraAplicacao:
             self.logger.error(f"Data de posicao anterior a emissao: aplicacao={aplicacao.id} emissao={aplicacao.data_emissao} data_final={data_final}")
             raise ValueError("A data de posicao nao pode ser anterior a data de emissao.")
 
-        taxas = self.servico_taxas.obter_taxas(aplicacao.indexador, aplicacao.data_emissao, data_final, tentar_atualizar=tentar_atualizar_taxas)
+        indexador_busca = Indexador.SELIC if aplicacao.indexador == Indexador.SELIC_MAIS else aplicacao.indexador
+        taxas = self.servico_taxas.obter_taxas(indexador_busca, aplicacao.data_emissao, data_final, tentar_atualizar=tentar_atualizar_taxas)
         self.logger.debug(f"Taxas disponiveis para calculo da aplicacao {aplicacao.id}: {len(taxas)}")
         saldo = Decimal(aplicacao.valor_aplicado)
         posicoes: list[PosicaoDiaria] = []
@@ -51,8 +52,11 @@ class CalculadoraAplicacao:
                 taxa_base_diaria = self.obter_taxa_diaria(aplicacao=aplicacao, data_atual=data_atual, taxas=taxas, ultima_taxa_base_diaria=ultima_taxa_base_diaria, projetar_com_ultima_taxa=projetar_com_ultima_taxa)
                 if taxa_base_diaria > 0:
                     ultima_taxa_base_diaria = taxa_base_diaria
-                    percentual = aplicacao.percentual_indexador / Decimal("100")
-                    juros = saldo * taxa_base_diaria * percentual
+                    if aplicacao.indexador == Indexador.SELIC_MAIS:
+                        juros = saldo * taxa_base_diaria
+                    else:
+                        percentual = aplicacao.percentual_indexador / Decimal("100")
+                        juros = saldo * taxa_base_diaria * percentual
                     saldo += juros
                     houve_rendimento = True
 
@@ -117,7 +121,11 @@ class CalculadoraAplicacao:
         self.logger.debug(f"Taxa encontrada para a data {data_atual}: {resultado_taxa}")
         data_taxa_usada, taxa_percentual_dia = resultado_taxa
 
-        return taxa_percentual_dia / Decimal("100")
+        taxa_base = taxa_percentual_dia / Decimal("100")
+        if aplicacao.indexador == Indexador.SELIC_MAIS:
+            spread_diario = self.converter_taxa_anual_para_diaria(aplicacao.spread_anual or Decimal("0"))
+            return taxa_base + spread_diario
+        return taxa_base
 
     def converter_taxa_anual_para_diaria(self, taxa_anual_percentual: Decimal) -> Decimal:
         taxa = Decimal(taxa_anual_percentual) / Decimal("100")

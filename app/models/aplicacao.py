@@ -9,6 +9,7 @@ class Indexador(str, Enum):
     CDI = "CDI"
     SELIC = "SELIC"
     PREFIXADO = "PREFIXADO"
+    SELIC_MAIS = "SELIC+"
 
 
 class TipoProduto(str, Enum):
@@ -17,11 +18,12 @@ class TipoProduto(str, Enum):
 
 
 class Aplicacao:
-    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, data_resgate: date | None = None, id: str | None = None) -> None:
+    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", data_resgate: date | None = None, id: str | None = None) -> None:
         self.id = id or str(uuid4())
         self.nome_produto = nome_produto.strip() or "Produto sem nome"
         self.numero_controle = numero_controle.strip()
         self.numero_nota = numero_nota.strip()
+        self.banco = banco.strip()
         self.data_resgate = data_resgate
         self.valor_aplicado = Decimal(valor_aplicado)
         self.data_emissao = data_emissao
@@ -29,13 +31,14 @@ class Aplicacao:
         self.indexador = Indexador(indexador)
         self.percentual_indexador = Decimal(percentual_indexador)
         self.taxa_prefixada_anual = taxa_prefixada_anual
+        self.spread_anual = spread_anual
         self.tipo_produto = TipoProduto(tipo_produto)
 
         self.validar()
 
     @classmethod
-    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB) -> "Aplicacao":
-        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, tipo_produto=tipo_produto)
+    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "") -> "Aplicacao":
+        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, spread_anual=spread_anual, tipo_produto=tipo_produto, banco=banco)
 
     def validar(self) -> None:
         if self.valor_aplicado <= 0:
@@ -50,9 +53,14 @@ class Aplicacao:
         if self.indexador == Indexador.PREFIXADO:
             if self.taxa_prefixada_anual is None:
                 raise ValueError("Informe a taxa anual para aplicacao prefixada.")
-
             if self.taxa_prefixada_anual < 0:
                 raise ValueError("A taxa prefixada nao pode ser negativa.")
+
+        if self.indexador == Indexador.SELIC_MAIS:
+            if self.spread_anual is None:
+                raise ValueError("Informe o spread anual para aplicacao SELIC+.")
+            if self.spread_anual < 0:
+                raise ValueError("O spread anual nao pode ser negativo.")
 
     @property
     def prazo_dias_corridos(self) -> int:
@@ -63,6 +71,10 @@ class Aplicacao:
         if self.indexador == Indexador.PREFIXADO:
             taxa = self.taxa_prefixada_anual or Decimal("0")
             return f"{taxa:.2f}% A.A.".replace(".", ",")
+
+        if self.indexador == Indexador.SELIC_MAIS:
+            spread = self.spread_anual or Decimal("0")
+            return f"SELIC + {spread:.2f}% A.A.".replace(".", ",")
 
         return f"{self.percentual_indexador:.2f}% {self.indexador.value}".replace(".", ",")
 

@@ -61,7 +61,9 @@ class RepositorioAplicacoes:
             "indexador": aplicacao.indexador.value,
             "percentual_indexador": str(aplicacao.percentual_indexador),
             "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual),
+            "spread_anual": None if aplicacao.spread_anual is None else str(aplicacao.spread_anual),
             "tipo_produto": aplicacao.tipo_produto.value,
+            "banco": aplicacao.banco,
             "data_resgate": aplicacao.data_resgate.isoformat() if aplicacao.data_resgate else None,
         }
 
@@ -77,6 +79,8 @@ class RepositorioAplicacoes:
             indexador=Indexador(dados["indexador"]),
             percentual_indexador=Decimal(str(dados.get("percentual_indexador", "100"))),
             taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"])),
+            spread_anual=None if dados.get("spread_anual") is None else Decimal(str(dados["spread_anual"])),
             tipo_produto=TipoProduto(dados.get("tipo_produto", TipoProduto.CDB.value)),
+            banco=dados.get("banco", ""),
             data_resgate=date.fromisoformat(dados["data_resgate"]) if dados.get("data_resgate") else None,
         )
