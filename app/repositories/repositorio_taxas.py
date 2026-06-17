@@ -1,10 +1,7 @@
-from __future__ import annotations
-
 import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-
 
 class RepositorioTaxas:
     def __init__(self, pasta: str | Path = "data/taxas") -> None:

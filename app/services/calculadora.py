@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import logging
 from datetime import date, timedelta
 from decimal import Decimal, getcontext
-
 from app.utils.calendario import eh_dia_util, intervalo_datas
 from app.utils.impostos import aliquota_iof, aliquota_ir
 from app.models.aplicacao import Aplicacao, Indexador, PosicaoDiaria, TipoProduto

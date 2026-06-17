@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-
 
 def texto_para_decimal(texto: str) -> Decimal:
     limpo = str(texto).strip().replace("R$", "").replace(" ", "")

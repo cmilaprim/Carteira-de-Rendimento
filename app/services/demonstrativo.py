@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import logging
 from datetime import date
 from decimal import Decimal
-
 from app.services.calculadora import CalculadoraAplicacao
 from app.models.aplicacao import Aplicacao, DemonstrativoCarteira, LinhaCarteira, LinhaMovimentacao
 

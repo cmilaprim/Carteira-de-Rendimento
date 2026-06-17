@@ -1,10 +1,7 @@
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-
 from app.utils.conversores import texto_para_data, texto_para_decimal
 from app.utils.formatadores import data_br, moeda_com_simbolo
 from app.models.aplicacao import Aplicacao, Indexador, TipoProduto

@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from datetime import date, timedelta
-
 
 def intervalo_datas(inicio: date, fim: date):
     atual = inicio

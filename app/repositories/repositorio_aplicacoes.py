@@ -1,13 +1,9 @@
-from __future__ import annotations
-
 import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
-
 from app.models.aplicacao import Aplicacao, Indexador, TipoProduto
-
 
 class RepositorioAplicacoes:
     def __init__(self, caminho: str | Path = "data/aplicacoes.json") -> None:

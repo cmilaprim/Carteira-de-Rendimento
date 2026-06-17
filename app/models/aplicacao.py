@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
@@ -35,7 +34,7 @@ class Aplicacao:
         self.validar()
 
     @classmethod
-    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB) -> Aplicacao:
+    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB) -> "Aplicacao":
         return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, tipo_produto=tipo_produto)
 
     def validar(self) -> None:

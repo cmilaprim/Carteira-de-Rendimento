@@ -1,20 +1,13 @@
-from __future__ import annotations
-
-import logging
 from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
 from app.utils.formatadores import data_br, data_curta, moeda, percentual
 from app.models.aplicacao import DemonstrativoCarteira
-
-logger = logging.getLogger(__name__)
 
 
 class RelatorioAplicacao(Protocol):
@@ -29,7 +22,6 @@ class RelatorioDemonstrativoCarteiraPDF:
 
     def gerar(self, demonstrativo: DemonstrativoCarteira) -> Path:
         caminho = self.pasta_saida / f"demonstrativo_carteira_{demonstrativo.data_saldo.isoformat()}.pdf"
-        logger.info(f"Gerando PDF da carteira: caminho={caminho} movimentacoes={len(demonstrativo.movimentacoes)} carteira={len(demonstrativo.carteira)}")
         documento = self.criar_documento(caminho)
         estilos = getSampleStyleSheet()
         elementos = []
@@ -46,13 +38,11 @@ class RelatorioDemonstrativoCarteiraPDF:
         elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=True))
 
         documento.build(elementos)
-        logger.info(f"PDF da carteira gerado com sucesso: {caminho}")
         return caminho
 
     def gerar_aplicacao(self, demonstrativo: DemonstrativoCarteira, numero_controle: str = "") -> Path:
         identificador = numero_controle.strip().replace("/", "-").replace("\\", "-") or "aplicacao"
         caminho = self.pasta_saida / f"aplicacao_{identificador}_{demonstrativo.data_saldo.isoformat()}.pdf"
-        logger.info(f"Gerando PDF da aplicacao: controle={numero_controle} caminho={caminho} linhas_carteira={len(demonstrativo.carteira)}")
         documento = self.criar_documento(caminho)
         estilos = getSampleStyleSheet()
         elementos = []
@@ -63,14 +53,12 @@ class RelatorioDemonstrativoCarteiraPDF:
         elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=False))
 
         documento.build(elementos)
-        logger.info(f"PDF da aplicacao gerado com sucesso: {caminho}")
         return caminho
 
     def criar_documento(self, caminho: Path) -> SimpleDocTemplate:
         return SimpleDocTemplate(str(caminho), pagesize=landscape(A4), leftMargin=8 * mm, rightMargin=8 * mm, topMargin=8 * mm, bottomMargin=8 * mm)
 
     def tabela_movimentacao(self, demonstrativo: DemonstrativoCarteira) -> Table:
-        logger.debug(f"Montando tabela de movimentacao: linhas={len(demonstrativo.movimentacoes)}")
         dados = [
             ["DATA", "OPERACAO", "NUMERO\nDA NOTA", "VALOR\nRESGATE BRUTO", "IMPOSTOS", "LIQUIDO DA OPERACAO", "D/C"],
             ["", "", "", "", "", "", ""],
@@ -113,7 +101,6 @@ class RelatorioDemonstrativoCarteiraPDF:
         return tabela
 
     def tabela_carteira(self, demonstrativo: DemonstrativoCarteira, mostrar_totais: bool) -> Table:
-        logger.debug(f"Montando tabela da carteira: linhas={len(demonstrativo.carteira)} mostrar_totais={mostrar_totais}")
         dados = [
             ["PRODUTO", "N°\nCONTROLE", "DATA\nEMISSAO", "DATA\nVCTO", "PRAZO", "TAXA", "VALOR DA\nAPLICACAO", "RENDIMENTO\nBRUTO NO\nPERIODO", "VALOR ATUALIZADO\nNA DATA\n(FLUTUANTE)", "IR", "IOF", "RESGATE LIQ."],
             ["", "", "", "", "", "", "", "", "", "", "", ""],
