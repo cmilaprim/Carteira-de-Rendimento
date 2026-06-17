@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-def abrir_arquivo(caminho: str | Path) -> None:
+def abrir_arquivo(caminho):
     caminho_absoluto = os.path.abspath(str(caminho))
     if sys.platform.startswith("win"):
         os.startfile(caminho_absoluto)

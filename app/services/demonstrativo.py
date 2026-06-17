@@ -1,13 +1,13 @@
-import logging
 from datetime import date
 from decimal import Decimal
 from app.services.calculadora import CalculadoraAplicacao
 from app.models.aplicacao import Aplicacao, DemonstrativoCarteira, LinhaCarteira, LinhaMovimentacao
+import logging
 
 
 class MontadorDemonstrativo:
-    def __init__(self, logger: logging.Logger | None = None) -> None:
-        self.logger = logger 
+    def __init__(self, logger):
+        self.logger: logging.Logger = logger
         self.calculadora = CalculadoraAplicacao(logger=self.logger)
 
     def montar(self, aplicacoes: list[Aplicacao], data_saldo: date) -> DemonstrativoCarteira:
@@ -16,7 +16,7 @@ class MontadorDemonstrativo:
         carteira: list[LinhaCarteira] = []
 
         for aplicacao in aplicacoes:
-            self.logger.debug(f"Processando aplicacao no demonstrativo: id={aplicacao.id} controle={aplicacao.numero_controle} emissao={aplicacao.data_emissao} vencimento={aplicacao.data_vencimento}")
+            self.logger.debug(f"Processando aplicacao no demonstrativo: id={aplicacao.id} emissao={aplicacao.data_emissao} vencimento={aplicacao.data_vencimento}")
             if aplicacao.data_emissao <= data_saldo:
                 movimentacoes.append(LinhaMovimentacao(
                     data=aplicacao.data_emissao,
@@ -46,13 +46,14 @@ class MontadorDemonstrativo:
 
             carteira.append(LinhaCarteira(
                 produto=aplicacao.nome_produto,
-                numero_controle=aplicacao.numero_controle,
+                tipo=aplicacao.tipo_produto.value,
                 data_emissao=aplicacao.data_emissao,
                 data_vencimento=aplicacao.data_vencimento,
                 prazo=aplicacao.prazo_dias_corridos,
                 taxa=aplicacao.rotulo_taxa,
                 valor_aplicacao=aplicacao.valor_aplicado,
                 rendimento_bruto_percentual=rendimento_percentual,
+                rendimento_bruto=ultima.saldo_bruto - aplicacao.valor_aplicado,
                 valor_atualizado=ultima.saldo_bruto,
                 valor_ir=ultima.valor_ir,
                 valor_iof=ultima.valor_iof,
@@ -61,7 +62,7 @@ class MontadorDemonstrativo:
             self.logger.debug(f"Aplicacao {aplicacao.id} adicionada na carteira: saldo_bruto={ultima.saldo_bruto} saldo_liquido={ultima.saldo_liquido}")
 
         movimentacoes.sort(key=lambda item: item.data)
-        carteira.sort(key=lambda item: (item.produto, item.numero_controle))
+        carteira.sort(key=lambda item: (item.produto,))
 
         self.logger.info(f"Demonstrativo montado: movimentacoes={len(movimentacoes)} carteira={len(carteira)}")
         return DemonstrativoCarteira(data_saldo=data_saldo, movimentacoes=movimentacoes, carteira=carteira)

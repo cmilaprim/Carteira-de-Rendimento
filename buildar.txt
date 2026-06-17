@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --name "Carteira de Rendimento" --icon=icone.ico main.py

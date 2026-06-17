@@ -1,5 +1,4 @@
 
-from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import Enum
@@ -18,11 +17,12 @@ class TipoProduto(str, Enum):
 
 
 class Aplicacao:
-    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, id: str | None = None) -> None:
+    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, data_resgate: date | None = None, id: str | None = None) -> None:
         self.id = id or str(uuid4())
         self.nome_produto = nome_produto.strip() or "Produto sem nome"
         self.numero_controle = numero_controle.strip()
         self.numero_nota = numero_nota.strip()
+        self.data_resgate = data_resgate
         self.valor_aplicado = Decimal(valor_aplicado)
         self.data_emissao = data_emissao
         self.data_vencimento = data_vencimento
@@ -67,54 +67,55 @@ class Aplicacao:
         return f"{self.percentual_indexador:.2f}% {self.indexador.value}".replace(".", ",")
 
 
-@dataclass(frozen=True)
 class PosicaoDiaria:
-    data: date
-    dia_corrido: int
-    houve_rendimento: bool
-    taxa_base_diaria: Decimal
-    percentual_indexador: Decimal
-    saldo_abertura: Decimal
-    juros: Decimal
-    saldo_bruto: Decimal
-    rendimento_bruto: Decimal
-    aliquota_iof: Decimal
-    valor_iof: Decimal
-    aliquota_ir: Decimal
-    valor_ir: Decimal
-    rendimento_liquido: Decimal
-    saldo_liquido: Decimal
+    def __init__(self, data: date, dia_corrido: int, houve_rendimento: bool, taxa_base_diaria: Decimal, percentual_indexador: Decimal, saldo_abertura: Decimal, juros: Decimal, saldo_bruto: Decimal, rendimento_bruto: Decimal, aliquota_iof: Decimal, valor_iof: Decimal, aliquota_ir: Decimal, valor_ir: Decimal, rendimento_liquido: Decimal, saldo_liquido: Decimal) -> None:
+        self.data = data
+        self.dia_corrido = dia_corrido
+        self.houve_rendimento = houve_rendimento
+        self.taxa_base_diaria = taxa_base_diaria
+        self.percentual_indexador = percentual_indexador
+        self.saldo_abertura = saldo_abertura
+        self.juros = juros
+        self.saldo_bruto = saldo_bruto
+        self.rendimento_bruto = rendimento_bruto
+        self.aliquota_iof = aliquota_iof
+        self.valor_iof = valor_iof
+        self.aliquota_ir = aliquota_ir
+        self.valor_ir = valor_ir
+        self.rendimento_liquido = rendimento_liquido
+        self.saldo_liquido = saldo_liquido
 
 
-@dataclass(frozen=True)
 class LinhaMovimentacao:
-    data: date
-    operacao: str
-    numero_nota: str
-    valor_resgate_bruto: Decimal
-    impostos: Decimal
-    valor_liquido_operacao: Decimal
-    dc: str
+    def __init__(self, data: date, operacao: str,numero_nota: str, valor_resgate_bruto: Decimal, impostos: Decimal, valor_liquido_operacao: Decimal, dc: str) -> None:
+        self.data = data
+        self.operacao = operacao
+        self.numero_nota = numero_nota
+        self.valor_resgate_bruto = valor_resgate_bruto
+        self.impostos = impostos
+        self.valor_liquido_operacao = valor_liquido_operacao
+        self.dc = dc
 
 
-@dataclass(frozen=True)
 class LinhaCarteira:
-    produto: str
-    numero_controle: str
-    data_emissao: date
-    data_vencimento: date
-    prazo: int
-    taxa: str
-    valor_aplicacao: Decimal
-    rendimento_bruto_percentual: Decimal
-    valor_atualizado: Decimal
-    valor_ir: Decimal
-    valor_iof: Decimal
-    resgate_liquido: Decimal
+    def __init__(self, produto: str, tipo: str, data_emissao: date, data_vencimento: date, prazo: int, taxa: str, valor_aplicacao: Decimal, rendimento_bruto_percentual: Decimal, rendimento_bruto: Decimal, valor_atualizado: Decimal, valor_ir: Decimal, valor_iof: Decimal, resgate_liquido: Decimal) -> None:
+        self.produto = produto
+        self.tipo = tipo
+        self.data_emissao = data_emissao
+        self.data_vencimento = data_vencimento
+        self.prazo = prazo
+        self.taxa = taxa
+        self.valor_aplicacao = valor_aplicacao
+        self.rendimento_bruto_percentual = rendimento_bruto_percentual
+        self.rendimento_bruto = rendimento_bruto
+        self.valor_atualizado = valor_atualizado
+        self.valor_ir = valor_ir
+        self.valor_iof = valor_iof
+        self.resgate_liquido = resgate_liquido
 
 
-@dataclass(frozen=True)
 class DemonstrativoCarteira:
-    data_saldo: date
-    movimentacoes: list[LinhaMovimentacao] = field(default_factory=list)
-    carteira: list[LinhaCarteira] = field(default_factory=list)
+    def __init__(self, data_saldo: date, movimentacoes: list[LinhaMovimentacao] | None = None, carteira: list[LinhaCarteira] | None = None) -> None:
+        self.data_saldo = data_saldo
+        self.movimentacoes = movimentacoes if movimentacoes is not None else []
+        self.carteira = carteira if carteira is not None else []

@@ -4,8 +4,8 @@ from decimal import Decimal
 from pathlib import Path
 
 class RepositorioTaxas:
-    def __init__(self, pasta: str | Path = "data/taxas") -> None:
-        self.pasta = Path(pasta)
+    def __init__(self):
+        self.pasta = Path("data/taxas")
         self.pasta.mkdir(parents=True, exist_ok=True)
 
     def carregar(self, indexador: str) -> dict[date, Decimal]:

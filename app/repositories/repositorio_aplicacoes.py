@@ -6,8 +6,8 @@ from typing import Iterable
 from app.models.aplicacao import Aplicacao, Indexador, TipoProduto
 
 class RepositorioAplicacoes:
-    def __init__(self, caminho: str | Path = "data/aplicacoes.json") -> None:
-        self.caminho = Path(caminho)
+    def __init__(self) -> None:
+        self.caminho = Path("data/aplicacoes.json")
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
 
     def listar(self) -> list[Aplicacao]:
@@ -62,6 +62,7 @@ class RepositorioAplicacoes:
             "percentual_indexador": str(aplicacao.percentual_indexador),
             "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual),
             "tipo_produto": aplicacao.tipo_produto.value,
+            "data_resgate": aplicacao.data_resgate.isoformat() if aplicacao.data_resgate else None,
         }
 
     def para_aplicacao(self, dados: dict) -> Aplicacao:
@@ -77,4 +78,5 @@ class RepositorioAplicacoes:
             percentual_indexador=Decimal(str(dados.get("percentual_indexador", "100"))),
             taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"])),
             tipo_produto=TipoProduto(dados.get("tipo_produto", TipoProduto.CDB.value)),
+            data_resgate=date.fromisoformat(dados["data_resgate"]) if dados.get("data_resgate") else None,
         )

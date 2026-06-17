@@ -10,8 +10,8 @@ getcontext().prec = 28
 
 
 class CalculadoraAplicacao:
-    def __init__(self, logger: logging.Logger | None = None) -> None:
-        self.logger = logger or logging.getLogger(__name__)
+    def __init__(self, logger):
+        self.logger: logging.Logger = logger
         self.servico_taxas = ServicoTaxas(logger=self.logger)
 
     def buscar_taxa_com_defasagem(self, taxas_por_data: dict[date, Decimal], data_atual: date, defasagem_dias: int = 1) -> tuple[date, Decimal] | None:

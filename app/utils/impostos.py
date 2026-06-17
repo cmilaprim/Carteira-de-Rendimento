@@ -7,7 +7,7 @@ _TABELA_IOF = {
     11: Decimal("0.63"), 12: Decimal("0.60"), 13: Decimal("0.56"), 14: Decimal("0.53"), 15: Decimal("0.50"),
     16: Decimal("0.46"), 17: Decimal("0.43"), 18: Decimal("0.40"), 19: Decimal("0.36"), 20: Decimal("0.33"),
     21: Decimal("0.30"), 22: Decimal("0.26"), 23: Decimal("0.23"), 24: Decimal("0.20"), 25: Decimal("0.16"),
-    26: Decimal("0.13"), 27: Decimal("0.10"), 28: Decimal("0.06"), 29: Decimal("0.03"), 30: Decimal("0.00"),
+    26: Decimal("0.13"), 27: Decimal("0.10"), 28: Decimal("0.06"), 29: Decimal("0.03"), 30: Decimal("0.00")
 }
 
 
