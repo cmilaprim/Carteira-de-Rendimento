@@ -1,69 +1,73 @@
 # Carteira de Rendimento
 
-Sistema para calcular, gerenciar e acompanhar aplicações financeiras pós-fixadas indexadas a CDI ou SELIC.
+Aplicativo desktop para gestão e acompanhamento de aplicações de renda fixa indexadas ao CDI, SELIC ou taxa prefixada.
 
 ## Funcionalidades
 
-- **Cálculo de rendimento** para aplicações indexadas a CDI, SELIC ou com taxa prefixada
-- **Atualização automática de taxas** do Banco Central (via API SGS/BCData)
-- **Cache local** de taxas históricas em JSON para consultas offline
-- **Interface gráfica** para facilitar o cadastro e gestão das aplicações
-- **Geração de demonstrativo** consolidado em PDF
-- **Projeção de rendimento** para datas futuras
+- Cadastro de aplicações com produto, número de controle, nota, valor, datas, indexador e tipo
+- Suporte a CDB e Operações Compromissadas
+- Indexadores: CDI, SELIC e Prefixado (% a.a.)
+- Atualização automática das taxas CDI/SELIC via API do Banco Central (SGS)
+- Cálculo diário de rendimento bruto com projeção para datas futuras usando a última taxa conhecida
+- Apuração de IOF (tabela regressiva 30 dias) e IR (tabela regressiva por prazo)
+- Geração de PDF individual por aplicação ou da carteira completa
 
-## Características
+## Impostos aplicados
 
-A aplicação armazena apenas os dados contratuais das aplicações:
-- Produto e valor aplicado
-- Datas de emissão e vencimento
-- Indexador (CDI, SELIC ou PREFIXADO)
-- Percentual do indexador (ex: 115% CDI)
+| Imposto | Regra |
+|---|---|
+| IOF | Tabela regressiva de 96% (dia 1) a 0% (dia 30+) |
+| IR | 22,5% até 180 dias / 20% até 360 / 17,5% até 720 / 15% acima de 720 |
 
-As taxas históricas são mantidas em `data/taxas/` e podem ser atualizadas pela API do Banco Central.
+## Séries do Banco Central utilizadas
 
-## Quick Start
+| Indexador | Série SGS |
+|---|---|
+| CDI diário | 12 |
+| SELIC diária | 11 |
 
-### Instalação
+## Requisitos
+
+- Python 3.10+
+- Dependências listadas em `requirements.txt`
+
+## Instalação
 
 ```bash
+mkvirtualenv carteira-de-rendimento
+workon carteira-de-rendimento
 pip install -r requirements.txt
 ```
 
-### Executar a aplicação
+## Uso
 
 ```bash
 python main.py
 ```
 
-### Rodar testes
+## Gerar executável
 
 ```bash
-pytest
+workon carteira-de-rendimento
+python -m PyInstaller --onefile --windowed --name "Carteira de Rendimento" main.py
 ```
 
-## Dados do Banco Central
+O `.exe` gerado fica em `dist/`. Execute-o a partir de uma pasta dedicada — as pastas `data/`, `data/pdfs/` e `logs/` são criadas automaticamente ao lado do executável na primeira execução.
 
-As séries de taxas utilizadas:
-- **CDI diário**: Série SGS 12
-- **SELIC diária**: Série SGS 11
-
-> Nota: As séries são retornadas em percentual ao dia e são convertidas para cálculos no sistema.
-
-## Importante
-
-Para datas futuras onde o Banco Central ainda não publicou as taxas diárias, o sistema permite projetar usando a última taxa conhecida (`projetar_com_ultima_taxa=True`). Esta é uma projeção, não um valor oficial.
-
-## Estrutura do Projeto
+## Estrutura
 
 ```
 app/
-  ├── core/          # Cálculos e lógica principal
-  ├── taxas/         # Integração com Banco Central
-  ├── armazenamento/ # Persistência de dados
-  ├── relatorios/    # Geração de PDFs
-  └── ui/            # Interface gráfica
+  models/         # entidades de domínio (Aplicacao, PosicaoDiaria, etc.)
+  controllers/    # CarteiraController — orquestra a lógica de negócio
+  services/       # cálculo, demonstrativo, taxas, PDF
+  repositories/   # persistência em JSON
+  utils/          # formatadores, conversores, calendário, impostos
+  views/          # interface gráfica (tkinter)
 data/
-  ├── aplicacoes.json # Dados das aplicações
-  └── taxas/          # Cache de taxas do BCB
-tests/               # Testes unitários
+  aplicacoes.json # aplicações cadastradas
+  taxas/          # histórico CDI e SELIC em JSON
+  pdfs/           # relatórios gerados
+logs/             # arquivos de log
 ```
+
