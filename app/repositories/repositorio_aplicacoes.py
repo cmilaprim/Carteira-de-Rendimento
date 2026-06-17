@@ -5,7 +5,9 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
-from app.core.modelos import Aplicacao, Indexador
+
+from app.models.aplicacao import Aplicacao, Indexador, TipoProduto
+
 
 class RepositorioAplicacoes:
     def __init__(self, caminho: str | Path = "data/aplicacoes.json") -> None:
@@ -62,7 +64,8 @@ class RepositorioAplicacoes:
             "data_vencimento": aplicacao.data_vencimento.isoformat(),
             "indexador": aplicacao.indexador.value,
             "percentual_indexador": str(aplicacao.percentual_indexador),
-            "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual)
+            "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual),
+            "tipo_produto": aplicacao.tipo_produto.value,
         }
 
     def para_aplicacao(self, dados: dict) -> Aplicacao:
@@ -76,5 +79,6 @@ class RepositorioAplicacoes:
             data_vencimento=date.fromisoformat(dados["data_vencimento"]),
             indexador=Indexador(dados["indexador"]),
             percentual_indexador=Decimal(str(dados.get("percentual_indexador", "100"))),
-            taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"]))
+            taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"])),
+            tipo_produto=TipoProduto(dados.get("tipo_produto", TipoProduto.CDB.value)),
         )

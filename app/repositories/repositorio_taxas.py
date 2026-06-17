@@ -17,8 +17,7 @@ class RepositorioTaxas:
             return {}
         with caminho.open("r", encoding="utf-8") as arquivo:
             dados = json.load(arquivo)
-        
-        return { date.fromisoformat(item["data"]): Decimal(str(item["valor"])) for item in dados}
+        return {date.fromisoformat(item["data"]): Decimal(str(item["valor"])) for item in dados}
 
     def salvar(self, indexador: str, taxas: dict[date, Decimal]) -> None:
         caminho = self.caminho(indexador)

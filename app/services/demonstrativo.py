@@ -4,23 +4,22 @@ import logging
 from datetime import date
 from decimal import Decimal
 
-from app.core.calculadora import CalculadoraAplicacao
-from app.core.modelos import Aplicacao, DemonstrativoCarteira, LinhaCarteira, LinhaMovimentacao
-
-logger = logging.getLogger(__name__)
+from app.services.calculadora import CalculadoraAplicacao
+from app.models.aplicacao import Aplicacao, DemonstrativoCarteira, LinhaCarteira, LinhaMovimentacao
 
 
 class MontadorDemonstrativo:
-    def __init__(self, calculadora: CalculadoraAplicacao | None = None) -> None:
-        self.calculadora = calculadora or CalculadoraAplicacao()
+    def __init__(self, logger: logging.Logger | None = None) -> None:
+        self.logger = logger 
+        self.calculadora = CalculadoraAplicacao(logger=self.logger)
 
     def montar(self, aplicacoes: list[Aplicacao], data_saldo: date) -> DemonstrativoCarteira:
-        logger.info("Montando demonstrativo: aplicacoes=%d data_saldo=%s", len(aplicacoes), data_saldo)
+        self.logger.info(f"Montando demonstrativo: aplicacoes={len(aplicacoes)} data_saldo={data_saldo}")
         movimentacoes: list[LinhaMovimentacao] = []
         carteira: list[LinhaCarteira] = []
 
         for aplicacao in aplicacoes:
-            logger.debug("Processando aplicacao no demonstrativo: id=%s controle=%s emissao=%s vencimento=%s", aplicacao.id, aplicacao.numero_controle, aplicacao.data_emissao, aplicacao.data_vencimento)
+            self.logger.debug(f"Processando aplicacao no demonstrativo: id={aplicacao.id} controle={aplicacao.numero_controle} emissao={aplicacao.data_emissao} vencimento={aplicacao.data_vencimento}")
             if aplicacao.data_emissao <= data_saldo:
                 movimentacoes.append(LinhaMovimentacao(
                     data=aplicacao.data_emissao,
@@ -31,15 +30,15 @@ class MontadorDemonstrativo:
                     valor_liquido_operacao=aplicacao.valor_aplicado,
                     dc="D"
                 ))
-                logger.debug("Movimentacao adicionada para aplicacao %s.", aplicacao.id)
+                self.logger.debug(f"Movimentacao adicionada para aplicacao {aplicacao.id}.")
 
             if aplicacao.data_emissao > data_saldo:
-                logger.info("Aplicacao %s ignorada na carteira: emissao=%s posterior a data_saldo=%s", aplicacao.id, aplicacao.data_emissao, data_saldo)
+                self.logger.info(f"Aplicacao {aplicacao.id} ignorada na carteira: emissao={aplicacao.data_emissao} posterior a data_saldo={data_saldo}")
                 continue
 
             posicoes = self.calculadora.calcular(aplicacao, data_posicao=min(data_saldo, aplicacao.data_vencimento))
             if not posicoes:
-                logger.warning("Aplicacao %s nao gerou posicoes para o demonstrativo.", aplicacao.id)
+                self.logger.warning(f"Aplicacao {aplicacao.id} nao gerou posicoes para o demonstrativo.")
                 continue
             ultima = posicoes[-1]
 
@@ -62,10 +61,10 @@ class MontadorDemonstrativo:
                 valor_iof=ultima.valor_iof,
                 resgate_liquido=ultima.saldo_liquido
             ))
-            logger.debug("Aplicacao %s adicionada na carteira: saldo_bruto=%s saldo_liquido=%s", aplicacao.id, ultima.saldo_bruto, ultima.saldo_liquido)
+            self.logger.debug(f"Aplicacao {aplicacao.id} adicionada na carteira: saldo_bruto={ultima.saldo_bruto} saldo_liquido={ultima.saldo_liquido}")
 
         movimentacoes.sort(key=lambda item: item.data)
         carteira.sort(key=lambda item: (item.produto, item.numero_controle))
 
-        logger.info("Demonstrativo montado: movimentacoes=%d carteira=%d", len(movimentacoes), len(carteira))
+        self.logger.info(f"Demonstrativo montado: movimentacoes={len(movimentacoes)} carteira={len(carteira)}")
         return DemonstrativoCarteira(data_saldo=data_saldo, movimentacoes=movimentacoes, carteira=carteira)

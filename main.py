@@ -1,7 +1,7 @@
 from app.logger import cria_logger
-from app.ui.aplicativo import iniciar_aplicativo
-
+from app.views.aplicativo import AplicativoCarteira
 
 if __name__ == "__main__":
-    cria_logger(nome_arquivo="Carteira")
-    iniciar_aplicativo()
+    logger = cria_logger(nome_arquivo="carteira")
+    app = AplicativoCarteira(logger=logger)
+    app.mainloop()

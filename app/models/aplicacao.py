@@ -5,54 +5,53 @@ from datetime import date
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
-from typing import Protocol
-from pathlib import Path
+
+
 class Indexador(str, Enum):
     CDI = "CDI"
     SELIC = "SELIC"
     PREFIXADO = "PREFIXADO"
 
 
-@dataclass
+class TipoProduto(str, Enum):
+    CDB = "CDB"
+    COMPROMISSADA = "COMPROMISSADA"
+
+
 class Aplicacao:
-    id: str
-    nome_produto: str
-    numero_controle: str
-    numero_nota: str
-    valor_aplicado: Decimal
-    data_emissao: date
-    data_vencimento: date
-    indexador: Indexador
-    percentual_indexador: Decimal = Decimal("100")
-    taxa_prefixada_anual: Decimal | None = None
+    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, id: str | None = None) -> None:
+        self.id = id or str(uuid4())
+        self.nome_produto = nome_produto.strip() or "Produto sem nome"
+        self.numero_controle = numero_controle.strip()
+        self.numero_nota = numero_nota.strip()
+        self.valor_aplicado = Decimal(valor_aplicado)
+        self.data_emissao = data_emissao
+        self.data_vencimento = data_vencimento
+        self.indexador = Indexador(indexador)
+        self.percentual_indexador = Decimal(percentual_indexador)
+        self.taxa_prefixada_anual = taxa_prefixada_anual
+        self.tipo_produto = TipoProduto(tipo_produto)
+
+        self.validar()
 
     @classmethod
-    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None) -> "Aplicacao":
-        aplicacao = cls(
-            id=str(uuid4()),
-            nome_produto=nome_produto.strip() or "Produto sem nome",
-            numero_controle=numero_controle.strip(),
-            numero_nota=numero_nota.strip(),
-            valor_aplicado=Decimal(valor_aplicado),
-            data_emissao=data_emissao,
-            data_vencimento=data_vencimento,
-            indexador=Indexador(indexador),
-            percentual_indexador=Decimal(percentual_indexador),
-            taxa_prefixada_anual=taxa_prefixada_anual
-        )
-        aplicacao.validar()
-        return aplicacao
+    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB) -> Aplicacao:
+        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, tipo_produto=tipo_produto)
 
     def validar(self) -> None:
         if self.valor_aplicado <= 0:
             raise ValueError("O valor aplicado deve ser maior que zero.")
+
         if self.data_vencimento < self.data_emissao:
             raise ValueError("A data de vencimento nao pode ser anterior a data de emissao.")
+
         if self.percentual_indexador <= 0:
             raise ValueError("O percentual do indexador deve ser maior que zero.")
+
         if self.indexador == Indexador.PREFIXADO:
             if self.taxa_prefixada_anual is None:
                 raise ValueError("Informe a taxa anual para aplicacao prefixada.")
+
             if self.taxa_prefixada_anual < 0:
                 raise ValueError("A taxa prefixada nao pode ser negativa.")
 
@@ -65,6 +64,7 @@ class Aplicacao:
         if self.indexador == Indexador.PREFIXADO:
             taxa = self.taxa_prefixada_anual or Decimal("0")
             return f"{taxa:.2f}% A.A.".replace(".", ",")
+
         return f"{self.percentual_indexador:.2f}% {self.indexador.value}".replace(".", ",")
 
 
@@ -119,32 +119,3 @@ class DemonstrativoCarteira:
     data_saldo: date
     movimentacoes: list[LinhaMovimentacao] = field(default_factory=list)
     carteira: list[LinhaCarteira] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class DadosAplicacaoFormulario:
-    nome_produto: str
-    numero_controle: str
-    numero_nota: str
-    valor_aplicado: str
-    data_emissao: str
-    data_vencimento: str
-    indexador: str
-    percentual_indexador: str
-    taxa_prefixada: str
-
-
-@dataclass(frozen=True)
-class LinhaAplicacaoLista:
-    id: str
-    produto: str
-    controle: str
-    emissao: str
-    vencimento: str
-    taxa: str
-    valor: str
-
-
-class RelatorioAplicacao(Protocol):
-    def gerar_aplicacao(self, demonstrativo, numero_controle: str = "") -> Path:
-        ...

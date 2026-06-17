@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 from pathlib import Path
+from typing import Protocol
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -10,10 +11,15 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.core.formatadores import data_br, data_curta, moeda, percentual
-from app.core.modelos import DemonstrativoCarteira
+from app.utils.formatadores import data_br, data_curta, moeda, percentual
+from app.models.aplicacao import DemonstrativoCarteira
 
 logger = logging.getLogger(__name__)
+
+
+class RelatorioAplicacao(Protocol):
+    def gerar(self, demonstrativo: DemonstrativoCarteira) -> Path: ...
+    def gerar_aplicacao(self, demonstrativo: DemonstrativoCarteira, numero_controle: str = "") -> Path: ...
 
 
 class RelatorioDemonstrativoCarteiraPDF:
@@ -23,7 +29,7 @@ class RelatorioDemonstrativoCarteiraPDF:
 
     def gerar(self, demonstrativo: DemonstrativoCarteira) -> Path:
         caminho = self.pasta_saida / f"demonstrativo_carteira_{demonstrativo.data_saldo.isoformat()}.pdf"
-        logger.info("Gerando PDF da carteira: caminho=%s movimentacoes=%d carteira=%d", caminho, len(demonstrativo.movimentacoes), len(demonstrativo.carteira))
+        logger.info(f"Gerando PDF da carteira: caminho={caminho} movimentacoes={len(demonstrativo.movimentacoes)} carteira={len(demonstrativo.carteira)}")
         documento = self.criar_documento(caminho)
         estilos = getSampleStyleSheet()
         elementos = []
@@ -40,13 +46,13 @@ class RelatorioDemonstrativoCarteiraPDF:
         elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=True))
 
         documento.build(elementos)
-        logger.info("PDF da carteira gerado com sucesso: %s", caminho)
+        logger.info(f"PDF da carteira gerado com sucesso: {caminho}")
         return caminho
 
     def gerar_aplicacao(self, demonstrativo: DemonstrativoCarteira, numero_controle: str = "") -> Path:
         identificador = numero_controle.strip().replace("/", "-").replace("\\", "-") or "aplicacao"
         caminho = self.pasta_saida / f"aplicacao_{identificador}_{demonstrativo.data_saldo.isoformat()}.pdf"
-        logger.info("Gerando PDF da aplicacao: controle=%s caminho=%s linhas_carteira=%d", numero_controle,caminho, len(demonstrativo.carteira))
+        logger.info(f"Gerando PDF da aplicacao: controle={numero_controle} caminho={caminho} linhas_carteira={len(demonstrativo.carteira)}")
         documento = self.criar_documento(caminho)
         estilos = getSampleStyleSheet()
         elementos = []
@@ -57,14 +63,14 @@ class RelatorioDemonstrativoCarteiraPDF:
         elementos.append(self.tabela_carteira(demonstrativo, mostrar_totais=False))
 
         documento.build(elementos)
-        logger.info("PDF da aplicacao gerado com sucesso: %s", caminho)
+        logger.info(f"PDF da aplicacao gerado com sucesso: {caminho}")
         return caminho
 
     def criar_documento(self, caminho: Path) -> SimpleDocTemplate:
         return SimpleDocTemplate(str(caminho), pagesize=landscape(A4), leftMargin=8 * mm, rightMargin=8 * mm, topMargin=8 * mm, bottomMargin=8 * mm)
 
     def tabela_movimentacao(self, demonstrativo: DemonstrativoCarteira) -> Table:
-        logger.debug("Montando tabela de movimentacao: linhas=%d", len(demonstrativo.movimentacoes))
+        logger.debug(f"Montando tabela de movimentacao: linhas={len(demonstrativo.movimentacoes)}")
         dados = [
             ["DATA", "OPERACAO", "NUMERO\nDA NOTA", "VALOR\nRESGATE BRUTO", "IMPOSTOS", "LIQUIDO DA OPERACAO", "D/C"],
             ["", "", "", "", "", "", ""],
@@ -83,14 +89,8 @@ class RelatorioDemonstrativoCarteiraPDF:
             dados.append(["-", "Sem movimentacao", "", "", "", "", ""])
 
         tabela = Table(dados, colWidths=[
-                                24*mm,  # data
-                                35*mm,  # operacao
-                                30*mm,  # nota
-                                36*mm,  # valor bruto
-                                30*mm,  # impostos
-                                40*mm,  # valor liquido
-                                14*mm   # D/C
-                            ], repeatRows=2)
+            24 * mm, 35 * mm, 30 * mm, 36 * mm, 30 * mm, 40 * mm, 14 * mm,
+        ], repeatRows=2)
         tabela.setStyle(TableStyle([
             ("SPAN", (0, 0), (0, 1)),
             ("SPAN", (1, 0), (1, 1)),
@@ -113,9 +113,9 @@ class RelatorioDemonstrativoCarteiraPDF:
         return tabela
 
     def tabela_carteira(self, demonstrativo: DemonstrativoCarteira, mostrar_totais: bool) -> Table:
-        logger.debug("Montando tabela da carteira: linhas=%d mostrar_totais=%s", len(demonstrativo.carteira), mostrar_totais)
+        logger.debug(f"Montando tabela da carteira: linhas={len(demonstrativo.carteira)} mostrar_totais={mostrar_totais}")
         dados = [
-            ["PRODUTO", "N\u00b0\nCONTROLE", "DATA\nEMISSAO", "DATA\nVCTO", "PRAZO", "TAXA", "VALOR DA\nAPLICACAO", "RENDIMENTO\nBRUTO NO\nPERIODO", "VALOR ATUALIZADO\nNA DATA\n(FLUTUANTE)", "IR", "IOF", "RESGATE LIQ."],
+            ["PRODUTO", "N°\nCONTROLE", "DATA\nEMISSAO", "DATA\nVCTO", "PRAZO", "TAXA", "VALOR DA\nAPLICACAO", "RENDIMENTO\nBRUTO NO\nPERIODO", "VALOR ATUALIZADO\nNA DATA\n(FLUTUANTE)", "IR", "IOF", "RESGATE LIQ."],
             ["", "", "", "", "", "", "", "", "", "", "", ""],
         ]
 
@@ -151,21 +151,10 @@ class RelatorioDemonstrativoCarteiraPDF:
 
         ultima_linha = len(dados) - 1
 
-        tabela = Table(dados, 
-                        colWidths=[
-                                42*mm,  # produto
-                                18*mm,  # controle
-                                16*mm,  # emissao
-                                16*mm,  # vencimento
-                                12*mm,  # prazo
-                                20*mm,  # taxa
-                                25*mm,  # valor aplicacao
-                                22*mm,  # rendimento
-                                30*mm,  # valor atualizado
-                                16*mm,  # IR
-                                16*mm,  # IOF
-                                22*mm   # resgate liquido
-                            ],repeatRows=2)
+        tabela = Table(dados, colWidths=[
+            42 * mm, 18 * mm, 16 * mm, 16 * mm, 12 * mm, 20 * mm,
+            25 * mm, 22 * mm, 30 * mm, 16 * mm, 16 * mm, 22 * mm,
+        ], repeatRows=2)
         estilos = [
             ("SPAN", (0, 0), (0, 1)),
             ("SPAN", (1, 0), (1, 1)),
