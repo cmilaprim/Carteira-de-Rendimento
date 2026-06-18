@@ -3,8 +3,11 @@ __pycache__/
 .pytest_cache/
 data/aplicacoes.json
 data/pdfs/
+data/pdf/
 build/
 dist/
 *.spec
 *.log
 
+.pdf
+.env

@@ -64,6 +64,7 @@ class RepositorioAplicacoes:
             "spread_anual": None if aplicacao.spread_anual is None else str(aplicacao.spread_anual),
             "tipo_produto": aplicacao.tipo_produto.value,
             "banco": aplicacao.banco,
+            "empresa_id": aplicacao.empresa_id,
             "data_resgate": aplicacao.data_resgate.isoformat() if aplicacao.data_resgate else None,
         }
 
@@ -82,5 +83,6 @@ class RepositorioAplicacoes:
             spread_anual=None if dados.get("spread_anual") is None else Decimal(str(dados["spread_anual"])),
             tipo_produto=TipoProduto(dados.get("tipo_produto", TipoProduto.CDB.value)),
             banco=dados.get("banco", ""),
+            empresa_id=dados.get("empresa_id", ""),
             data_resgate=date.fromisoformat(dados["data_resgate"]) if dados.get("data_resgate") else None,
         )

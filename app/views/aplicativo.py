@@ -14,51 +14,50 @@ from app.utils.conversores import texto_para_data
 class AplicativoCarteira(tk.Tk):
     def __init__(self, logger):
         super().__init__()
+        self.withdraw()
         self.logger: logging.Logger = logger
-        self.title("Carteira de Aplicacoes")
-        self.geometry("1200x720")
-        self.minsize(960, 580)
+        self.title("Carteira de Aplicações")
+        self.minsize(1000, 580)
         sv_ttk.set_theme("light")
         self.controller = CarteiraController(logger=self.logger)
+        self._mapa_empresas: dict[str, str] = {}
         self.montar_tela()
         self.carregar_lista()
+        self.attributes('-zoomed', True)
+        self.deiconify()
 
     def montar_tela(self) -> None:
         notebook = ttk.Notebook(self)
         notebook.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         aba_aplicacoes = ttk.Frame(notebook)
-        notebook.add(aba_aplicacoes, text="  Aplicacoes  ")
+        notebook.add(aba_aplicacoes, text="  Aplicações  ")
         self.montar_aba_aplicacoes(aba_aplicacoes)
-
-        aba_bancos = ttk.Frame(notebook)
-        notebook.add(aba_bancos, text="  Bancos  ")
-        self.montar_aba_bancos(aba_bancos)
 
     # ── Aba Aplicações ────────────────────────────────────────────────────────
 
     def montar_aba_aplicacoes(self, pai) -> None:
-        formulario = ttk.LabelFrame(pai, text="Nova aplicacao")
+        formulario = ttk.LabelFrame(pai, text="Nova aplicação")
         formulario.pack(fill=tk.X, padx=14, pady=(14, 6))
 
         for i in range(8):
             formulario.columnconfigure(i, weight=1)
 
-        # Linha 0: Produto | Valor | Tipo | Banco
-        self.nome_produto = self.campo(formulario, "Produto", 0, 0, largura=28)
-        self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 2, largura=16)
+        # Linha 0: Empresa | Produto | Valor | Tipo
+        ttk.Label(formulario, text="Empresa").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
+        self.empresa_aplicacao = ttk.Combobox(formulario, values=[], state="readonly", width=36)
+        self.empresa_aplicacao.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=6)
 
-        ttk.Label(formulario, text="Tipo").grid(row=0, column=4, sticky="w", padx=(10, 4), pady=6)
+        self.nome_produto = self.campo(formulario, "Produto", 0, 2, largura=28)
+        self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 4, largura=16)
+
+        ttk.Label(formulario, text="Tipo").grid(row=0, column=6, sticky="w", padx=(10, 4), pady=6)
         opcoes_tipo = self.controller.tipos_produto()
         self.tipo_produto = ttk.Combobox(formulario, values=opcoes_tipo, state="readonly", width=14)
         self.tipo_produto.set(opcoes_tipo[0])
-        self.tipo_produto.grid(row=0, column=5, sticky="ew", padx=(4, 10), pady=6)
+        self.tipo_produto.grid(row=0, column=7, sticky="ew", padx=(4, 14), pady=6)
 
-        ttk.Label(formulario, text="Banco").grid(row=0, column=6, sticky="w", padx=(10, 4), pady=6)
-        self.banco_aplicacao = ttk.Combobox(formulario, values=[], state="readonly", width=14)
-        self.banco_aplicacao.grid(row=0, column=7, sticky="ew", padx=(4, 14), pady=6)
-
-        # Linha 1: Emissao | Vencimento | Indexador
+        # Linha 1: Emissao | Vencimento | Indexador | Banco
         self.data_emissao = self.campo_data(formulario, "Emissao", 1, 0)
         self.data_vencimento = self.campo_data(formulario, "Vencimento", 1, 2)
 
@@ -68,6 +67,10 @@ class AplicativoCarteira(tk.Tk):
         self.indexador.set(opcoes_indexadores[0])
         self.indexador.grid(row=1, column=5, sticky="ew", padx=(4, 10), pady=6)
         self.indexador.bind("<<ComboboxSelected>>", self.ao_mudar_indexador)
+
+        ttk.Label(formulario, text="Banco").grid(row=1, column=6, sticky="w", padx=(10, 4), pady=6)
+        self.banco_aplicacao = ttk.Combobox(formulario, values=[], width=14)
+        self.banco_aplicacao.grid(row=1, column=7, sticky="ew", padx=(4, 14), pady=6)
 
         # Linha 2: % indexador | Taxa/Spread | Salvar (colspan 4)
         self.label_percentual = ttk.Label(formulario, text="% indexador")
@@ -81,8 +84,7 @@ class AplicativoCarteira(tk.Tk):
         self.taxa_prefixada = ttk.Entry(formulario, width=12, state="disabled")
         self.taxa_prefixada.grid(row=2, column=3, sticky="ew", padx=(4, 10), pady=6)
 
-        ttk.Button(formulario, text="Salvar aplicacao", command=self.salvar_aplicacao).grid(
-            row=2, column=4, columnspan=4, sticky="ew", padx=(10, 14), pady=6)
+        ttk.Button(formulario, text="Salvar aplicacao", command=self.salvar_aplicacao).grid(row=2, column=4, columnspan=4, sticky="ew", padx=(10, 14), pady=6)
 
         # Barra de ações
         acoes = ttk.Frame(pai)
@@ -95,15 +97,24 @@ class AplicativoCarteira(tk.Tk):
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
 
         ttk.Label(acoes, text="Banco:").pack(side=tk.LEFT, padx=(0, 4))
-        self.filtro_banco = ttk.Combobox(acoes, values=["Todos"], state="readonly", width=16)
+        self.filtro_banco = ttk.Combobox(acoes, values=["Todos"], width=16)
         self.filtro_banco.set("Todos")
         self.filtro_banco.pack(side=tk.LEFT)
         self.filtro_banco.bind("<<ComboboxSelected>>", lambda _e: self.carregar_lista())
 
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
 
+        ttk.Label(acoes, text="Empresa:").pack(side=tk.LEFT, padx=(0, 4))
+        self.filtro_empresa = ttk.Combobox(acoes, values=["Todas"], state="readonly", width=36)
+        self.filtro_empresa.set("Todas")
+        self.filtro_empresa.pack(side=tk.LEFT)
+        self.filtro_empresa.bind("<<ComboboxSelected>>", lambda _e: self.carregar_lista())
+
+        ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
+
         ttk.Button(acoes, text="Selecionar todas", command=self.selecionar_todas).pack(side=tk.LEFT, padx=3)
         ttk.Button(acoes, text="Marcar resgatada", command=self.marcar_resgatada).pack(side=tk.LEFT, padx=3)
+        ttk.Button(acoes, text="Editar", command=self.abrir_edicao).pack(side=tk.LEFT, padx=3)
         ttk.Button(acoes, text="Excluir", command=self.confirmar_exclusao).pack(side=tk.LEFT, padx=3)
 
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
@@ -111,8 +122,12 @@ class AplicativoCarteira(tk.Tk):
         ttk.Button(acoes, text="Gerar PDF", command=self.gerar_carteira_completa).pack(side=tk.LEFT, padx=3)
         ttk.Button(acoes, text="Exportar Excel", command=self.exportar_excel).pack(side=tk.LEFT, padx=3)
 
+        ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
+
+        ttk.Button(acoes, text="Empresas", command=self.abrir_gerenciar_empresas).pack(side=tk.LEFT, padx=3)
+
         # Lista de aplicações
-        lista_frame = ttk.LabelFrame(pai, text="Aplicacoes cadastradas")
+        lista_frame = ttk.LabelFrame(pai, text="Aplicações cadastradas")
         lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 14))
 
         colunas = ("produto", "banco", "tipo", "emissao", "vencimento", "taxa", "valor", "resgate")
@@ -125,7 +140,7 @@ class AplicativoCarteira(tk.Tk):
             ("vencimento", "Vencimento", 88),
             ("taxa", "Taxa", 120),
             ("valor", "Valor", 120),
-            ("resgate", "Resgate", 88),
+            ("resgate", "Resgate", 88)
         ]:
             self.lista.heading(coluna, text=titulo)
             self.lista.column(coluna, width=largura, minwidth=60)
@@ -137,36 +152,12 @@ class AplicativoCarteira(tk.Tk):
         self.lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
 
+        self.lista.bind("<Double-1>", self.abrir_edicao)
+
         self.atualizar_opcoes_banco()
-
-    # ── Aba Bancos ────────────────────────────────────────────────────────────
-
-    def montar_aba_bancos(self, pai) -> None:
-        form = ttk.LabelFrame(pai, text="Novo banco")
-        form.pack(fill=tk.X, padx=14, pady=(14, 6))
-        form.columnconfigure(1, weight=1)
-
-        ttk.Label(form, text="Nome do banco").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=10)
-        self.nome_banco = ttk.Entry(form, width=30)
-        self.nome_banco.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=10)
-        self.nome_banco.bind("<Return>", lambda _e: self.adicionar_banco())
-        ttk.Button(form, text="Adicionar", command=self.adicionar_banco).grid(
-            row=0, column=2, sticky="ew", padx=(4, 14), pady=10)
-
-        lista_frame = ttk.LabelFrame(pai, text="Bancos cadastrados")
-        lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 14))
-
-        self.lista_bancos = tk.Listbox(lista_frame, selectmode="single", font=("Segoe UI", 10), activestyle="none")
-        scrollbar_bancos = ttk.Scrollbar(lista_frame, orient="vertical", command=self.lista_bancos.yview)
-        self.lista_bancos.configure(yscrollcommand=scrollbar_bancos.set)
-
-        self.lista_bancos.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
-        scrollbar_bancos.pack(side=tk.LEFT, fill=tk.Y, pady=6)
-
-        ttk.Button(lista_frame, text="Remover selecionado", command=self.remover_banco).pack(
-            side=tk.LEFT, padx=14, pady=6, anchor="n")
-
-        self.carregar_bancos()
+        self.atualizar_opcoes_empresa()
+        self.configurar_autocomplete_banco(self.banco_aplicacao)
+        self.configurar_autocomplete_banco(self.filtro_banco, incluir_todos=True, ao_alterar=self.carregar_lista)
 
     # ── Helpers de formulário ─────────────────────────────────────────────────
 
@@ -197,21 +188,58 @@ class AplicativoCarteira(tk.Tk):
             self.label_taxa.configure(text="Taxa a.a.")
             self.taxa_prefixada.configure(state="disabled")
 
+    def configurar_autocomplete_banco(self, combobox: ttk.Combobox, incluir_todos: bool = False, ao_alterar=None):
+        def filtrar(event=None):
+            if event and event.keysym in ("Return", "Escape", "Tab", "Up", "Down"):
+                return
+            texto = combobox.get().strip().lower()
+            bancos = self.controller.listar_bancos()
+            opcoes = (["Todos"] + bancos) if incluir_todos else bancos
+            filtrados = [b for b in opcoes if texto in b.lower()] if texto else opcoes
+            combobox["values"] = filtrados
+            if ao_alterar:
+                ao_alterar()
+
+        combobox.bind("<KeyRelease>", filtrar)
+
+    def atualizar_opcoes_banco(self) -> None:
+        bancos = self.controller.listar_bancos()
+        opcoes = ["Todos"] + bancos
+        self.filtro_banco["values"] = opcoes
+        if self.filtro_banco.get() not in opcoes:
+            self.filtro_banco.set("Todos")
+        self.banco_aplicacao["values"] = bancos
+
+    def atualizar_opcoes_empresa(self) -> None:
+        empresas = self.controller.listar_empresas()
+        self._mapa_empresas = {e.rotulo: e.id for e in empresas}
+        rotulos = list(self._mapa_empresas.keys())
+        self.empresa_aplicacao["values"] = rotulos
+        opcoes_filtro = ["Todas"] + rotulos
+        self.filtro_empresa["values"] = opcoes_filtro
+        if self.filtro_empresa.get() not in opcoes_filtro:
+            self.filtro_empresa.set("Todas")
+
     # ── Ações sobre aplicações ────────────────────────────────────────────────
 
     def salvar_aplicacao(self) -> None:
         try:
-            self.controller.salvar_aplicacao(DadosAplicacaoFormulario(
-                nome_produto=self.nome_produto.get(),
-                valor_aplicado=self.valor_aplicado.get(),
-                data_emissao=self.data_emissao.get(),
-                data_vencimento=self.data_vencimento.get(),
-                indexador=self.indexador.get(),
-                percentual_indexador=self.percentual_indexador.get(),
-                taxa_prefixada=self.taxa_prefixada.get(),
-                tipo_produto=self.tipo_produto.get(),
-                banco=self.banco_aplicacao.get(),
-            ))
+            empresa_rotulo = self.empresa_aplicacao.get().strip()
+            empresa_id = self._mapa_empresas.get(empresa_rotulo, "")
+            self.controller.salvar_aplicacao(
+                DadosAplicacaoFormulario(
+                        nome_produto=self.nome_produto.get(),
+                        valor_aplicado=self.valor_aplicado.get(),
+                        data_emissao=self.data_emissao.get(),
+                        data_vencimento=self.data_vencimento.get(),
+                        indexador=self.indexador.get(),
+                        percentual_indexador=self.percentual_indexador.get(),
+                        taxa_prefixada=self.taxa_prefixada.get(),
+                        tipo_produto=self.tipo_produto.get(),
+                        banco=self.banco_aplicacao.get(),
+                        empresa_id=empresa_id
+                    )
+                )
             self.limpar_formulario()
             self.carregar_lista()
             messagebox.showinfo("Sucesso", "Aplicacao salva com sucesso.")
@@ -222,15 +250,18 @@ class AplicativoCarteira(tk.Tk):
     def carregar_lista(self) -> None:
         for item in self.lista.get_children():
             self.lista.delete(item)
-        banco_filtro = self.filtro_banco.get()
+        banco_filtro = self.filtro_banco.get().strip()
+        empresa_filtro = self.filtro_empresa.get().strip()
+        empresa_id_filtro = self._mapa_empresas.get(empresa_filtro)
         for linha in self.controller.listar_aplicacoes():
-            if banco_filtro != "Todos" and linha.banco != banco_filtro:
-                continue
+            if banco_filtro and banco_filtro.lower() != "todos":
+                if banco_filtro.lower() not in linha.banco.lower():
+                    continue
+            if empresa_id_filtro is not None:
+                if str(linha.empresa_id) != str(empresa_id_filtro):
+                    continue
             tags = ("resgatada",) if linha.resgate != "-" else ()
-            self.lista.insert("", tk.END, iid=linha.id, values=(
-                linha.produto, linha.banco, linha.tipo, linha.emissao,
-                linha.vencimento, linha.taxa, linha.valor, linha.resgate,
-            ), tags=tags)
+            self.lista.insert("", tk.END, iid=linha.id, values=(linha.produto, linha.banco, linha.tipo, linha.emissao, linha.vencimento, linha.taxa, linha.valor, linha.resgate), tags=tags)
 
     def limpar_formulario(self) -> None:
         self.taxa_prefixada.configure(state="normal")
@@ -242,6 +273,7 @@ class AplicativoCarteira(tk.Tk):
         self.indexador.set(self.controller.indexadores()[0])
         self.tipo_produto.set(self.controller.tipos_produto()[0])
         self.banco_aplicacao.set("")
+        self.empresa_aplicacao.set("")
         self.ao_mudar_indexador()
 
     def selecionar_todas(self) -> None:
@@ -271,17 +303,232 @@ class AplicativoCarteira(tk.Tk):
                 self.controller.marcar_resgatada(aplicacao_id, None)
                 self.carregar_lista()
         else:
-            data_str = simpledialog.askstring(
-                "Data do resgate",
-                "Informe a data do resgate (DD/MM/AAAA):",
-                initialvalue=date.today().strftime("%d/%m/%Y"),
-            )
+            data_str = simpledialog.askstring("Data do resgate", "Informe a data do resgate (DD/MM/AAAA):", initialvalue=date.today().strftime("%d/%m/%Y"))
             if data_str:
                 try:
                     self.controller.marcar_resgatada(aplicacao_id, texto_para_data(data_str))
                     self.carregar_lista()
                 except Exception:
                     messagebox.showerror("Erro", "Data invalida. Use o formato DD/MM/AAAA.")
+
+    def abrir_edicao(self, _event=None) -> None:
+        selecionados = self.lista.selection()
+        if not selecionados:
+            return
+        if len(selecionados) > 1:
+            messagebox.showwarning("Aviso", "Selecione apenas uma aplicacao para editar.")
+            return
+
+        aplicacao_id = selecionados[0]
+        try:
+            apl = self.controller.obter_aplicacao(aplicacao_id)
+        except Exception as erro:
+            messagebox.showerror("Erro", str(erro))
+            return
+
+        dlg = tk.Toplevel(self)
+        dlg.title("Editar Aplicacao")
+        dlg.geometry("1400x350")
+        dlg.resizable(True, False)
+        dlg.update()
+        dlg.grab_set()
+
+        frame = ttk.LabelFrame(dlg, text="Dados da aplicacao")
+        frame.pack(fill=tk.X, padx=14, pady=14)
+        for i in range(8):
+            frame.columnconfigure(i, weight=1)
+
+        # Linha 0: Produto | Valor | Tipo | Banco
+        ttk.Label(frame, text="Empresa").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
+        empresa_rotulo_atual = next((rotulo for rotulo, eid in self._mapa_empresas.items() if eid == apl.empresa_id), "")
+        empresa_dlg = ttk.Combobox(frame, values=list(self._mapa_empresas.keys()), state="readonly", width=40)
+        empresa_dlg.set(empresa_rotulo_atual)
+        empresa_dlg.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Valor aplicado").grid(row=0, column=2, sticky="w", padx=(10, 4), pady=6)
+        valor_dlg = ttk.Entry(frame, width=16)
+        valor_dlg.insert(0, str(apl.valor_aplicado))
+        valor_dlg.grid(row=0, column=3, sticky="ew", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Tipo").grid(row=0, column=4, sticky="w", padx=(10, 4), pady=6)
+        tipo_dlg = ttk.Combobox(frame, values=self.controller.tipos_produto(), state="readonly", width=14)
+        tipo_dlg.set(apl.tipo_produto.value)
+        tipo_dlg.grid(row=0, column=5, sticky="ew", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Banco").grid(row=0, column=6, sticky="w", padx=(10, 4), pady=6)
+        banco_dlg = ttk.Combobox(frame, values=self.controller.listar_bancos(), width=14)
+        banco_dlg.set(apl.banco)
+        banco_dlg.grid(row=0, column=7, sticky="ew", padx=(4, 14), pady=6)
+        self.configurar_autocomplete_banco(banco_dlg)
+
+        # Linha 1: Emissao | Vencimento | Indexador | Produto
+        ttk.Label(frame, text="Emissao").grid(row=1, column=0, sticky="w", padx=(10, 4), pady=6)
+        emissao_dlg = DateEntry(frame, date_pattern="dd/mm/yyyy", width=14)
+        emissao_dlg.set_date(apl.data_emissao)
+        emissao_dlg.grid(row=1, column=1, sticky="w", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Vencimento").grid(row=1, column=2, sticky="w", padx=(10, 4), pady=6)
+        vencimento_dlg = DateEntry(frame, date_pattern="dd/mm/yyyy", width=14)
+        vencimento_dlg.set_date(apl.data_vencimento)
+        vencimento_dlg.grid(row=1, column=3, sticky="w", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Indexador").grid(row=1, column=4, sticky="w", padx=(10, 4), pady=6)
+        indexador_dlg = ttk.Combobox(frame, values=self.controller.indexadores(), state="readonly", width=14)
+        indexador_dlg.set(apl.indexador.value)
+        indexador_dlg.grid(row=1, column=5, sticky="ew", padx=(4, 10), pady=6)
+
+        ttk.Label(frame, text="Produto").grid(row=1, column=6, sticky="w", padx=(10, 4), pady=6)
+        nome_dlg = ttk.Entry(frame, width=28)
+        nome_dlg.insert(0, apl.nome_produto)
+        nome_dlg.grid(row=1, column=7, sticky="ew", padx=(4, 14), pady=6)
+
+        # Linha 2: % indexador | Taxa | Botões
+        label_pct_dlg = ttk.Label(frame, text="% indexador")
+        label_pct_dlg.grid(row=2, column=0, sticky="w", padx=(10, 4), pady=6)
+        percentual_dlg = ttk.Entry(frame, width=12)
+        percentual_dlg.grid(row=2, column=1, sticky="ew", padx=(4, 10), pady=6)
+
+        label_taxa_dlg = ttk.Label(frame, text="Taxa a.a.")
+        label_taxa_dlg.grid(row=2, column=2, sticky="w", padx=(10, 4), pady=6)
+        taxa_dlg = ttk.Entry(frame, width=12)
+        taxa_dlg.grid(row=2, column=3, sticky="ew", padx=(4, 10), pady=6)
+
+        idx_val = apl.indexador.value
+        if idx_val == "PREFIXADO":
+            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            percentual_dlg.configure(state="disabled")
+            taxa_dlg.insert(0, str(apl.taxa_prefixada_anual or ""))
+        elif idx_val == "SELIC+":
+            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            percentual_dlg.configure(state="disabled")
+            label_taxa_dlg.configure(text="Spread a.a.")
+            taxa_dlg.insert(0, str(apl.spread_anual or ""))
+        else:
+            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            taxa_dlg.configure(state="disabled")
+
+        def ao_mudar_indexador_dlg(_event=None):
+            idx = indexador_dlg.get()
+            if idx == "PREFIXADO":
+                percentual_dlg.configure(state="disabled")
+                label_taxa_dlg.configure(text="Taxa a.a.")
+                taxa_dlg.configure(state="normal")
+            elif idx == "SELIC+":
+                percentual_dlg.configure(state="disabled")
+                label_taxa_dlg.configure(text="Spread a.a.")
+                taxa_dlg.configure(state="normal")
+            else:
+                percentual_dlg.configure(state="normal")
+                label_taxa_dlg.configure(text="Taxa a.a.")
+                taxa_dlg.configure(state="disabled")
+
+        indexador_dlg.bind("<<ComboboxSelected>>", ao_mudar_indexador_dlg)
+
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=2, column=4, columnspan=4, sticky="ew", padx=(10, 14), pady=6)
+
+        def salvar_edicao():
+            try:
+                empresa_rotulo = empresa_dlg.get().strip()
+                empresa_id = self._mapa_empresas.get(empresa_rotulo, "")
+                self.controller.editar_aplicacao(
+                    aplicacao_id, 
+                    DadosAplicacaoFormulario(
+                        nome_produto=nome_dlg.get(),
+                        valor_aplicado=valor_dlg.get(),
+                        data_emissao=emissao_dlg.get(),
+                        data_vencimento=vencimento_dlg.get(),
+                        indexador=indexador_dlg.get(),
+                        percentual_indexador=percentual_dlg.get(),
+                        taxa_prefixada=taxa_dlg.get(),
+                        tipo_produto=tipo_dlg.get(),
+                        banco=banco_dlg.get(),
+                        empresa_id=empresa_id
+                        )   
+                    )
+                self.carregar_lista()
+                dlg.destroy()
+                messagebox.showinfo("Sucesso", "Aplicacao atualizada com sucesso.")
+            except Exception as erro:
+                self.logger.exception("Erro ao editar aplicacao.")
+                messagebox.showerror("Erro", str(erro))
+
+        ttk.Button(btn_frame, text="Salvar", command=salvar_edicao).pack(side=tk.LEFT, padx=(0, 4), fill=tk.X, expand=True)
+        ttk.Button(btn_frame, text="Cancelar", command=dlg.destroy).pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    # ── Dialog de gerenciamento de empresas ───────────────────────────────────
+
+    def abrir_gerenciar_empresas(self) -> None:
+        dlg = tk.Toplevel(self)
+        dlg.title("Gerenciar Empresas")
+        dlg.geometry("520x420")
+        dlg.resizable(True, True)
+        dlg.grab_set()
+
+        lista_frame = ttk.LabelFrame(dlg, text="Empresas cadastradas")
+        lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(14, 6))
+
+        colunas_emp = ("nome", "cnpj")
+        lista_emp = ttk.Treeview(lista_frame, columns=colunas_emp, show="headings", height=10)
+        lista_emp.heading("nome", text="Nome")
+        lista_emp.heading("cnpj", text="CNPJ")
+        lista_emp.column("nome", width=270)
+        lista_emp.column("cnpj", width=170)
+        lista_emp.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
+
+        def carregar_empresas_dlg():
+            for item in lista_emp.get_children():
+                lista_emp.delete(item)
+            for emp in self.controller.listar_empresas():
+                lista_emp.insert("", tk.END, iid=emp.id, values=(emp.nome, emp.cnpj_formatado))
+
+        carregar_empresas_dlg()
+
+        form_frame = ttk.LabelFrame(dlg, text="Nova empresa")
+        form_frame.pack(fill=tk.X, padx=14, pady=6)
+        form_frame.columnconfigure(1, weight=1)
+        form_frame.columnconfigure(3, weight=1)
+
+        ttk.Label(form_frame, text="Nome").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
+        nome_emp = ttk.Entry(form_frame, width=28)
+        nome_emp.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=6)
+
+        ttk.Label(form_frame, text="CNPJ").grid(row=0, column=2, sticky="w", padx=(10, 4), pady=6)
+        cnpj_emp = ttk.Entry(form_frame, width=18)
+        cnpj_emp.grid(row=0, column=3, sticky="ew", padx=(4, 10), pady=6)
+
+        def adicionar_empresa():
+            nome = nome_emp.get().strip()
+            cnpj = cnpj_emp.get().strip()
+            if not nome:
+                messagebox.showwarning("Aviso", "Informe o nome da empresa.", parent=dlg)
+                return
+            try:
+                self.controller.adicionar_empresa(nome, cnpj)
+                nome_emp.delete(0, tk.END)
+                cnpj_emp.delete(0, tk.END)
+                carregar_empresas_dlg()
+                self.atualizar_opcoes_empresa()
+            except Exception as e:
+                messagebox.showerror("Erro", str(e), parent=dlg)
+
+        def excluir_empresa():
+            selecionados = lista_emp.selection()
+            if not selecionados:
+                messagebox.showwarning("Aviso", "Selecione uma empresa.", parent=dlg)
+                return
+            if messagebox.askyesno("Confirmar", "Excluir empresa selecionada?", parent=dlg):
+                self.controller.excluir_empresa(selecionados[0])
+                carregar_empresas_dlg()
+                self.atualizar_opcoes_empresa()
+
+        btn_frame = ttk.Frame(dlg)
+        btn_frame.pack(fill=tk.X, padx=14, pady=(0, 14))
+        ttk.Button(btn_frame, text="Adicionar", command=adicionar_empresa).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_frame, text="Excluir selecionada", command=excluir_empresa).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_frame, text="Fechar", command=dlg.destroy).pack(side=tk.RIGHT, padx=3)
+
+    # ── Relatórios ────────────────────────────────────────────────────────────
 
     def exportar_excel(self) -> None:
         try:
@@ -308,40 +555,3 @@ class AplicativoCarteira(tk.Tk):
         except Exception as erro:
             self.logger.exception("Erro ao gerar relatorio da carteira.")
             messagebox.showerror("Erro", str(erro))
-
-    # ── Ações sobre bancos ────────────────────────────────────────────────────
-
-    def carregar_bancos(self) -> None:
-        self.lista_bancos.delete(0, tk.END)
-        bancos = self.controller.listar_bancos()
-        for banco in bancos:
-            self.lista_bancos.insert(tk.END, banco)
-        self.atualizar_opcoes_banco(bancos)
-
-    def atualizar_opcoes_banco(self, bancos: list[str] | None = None) -> None:
-        if bancos is None:
-            bancos = self.controller.listar_bancos()
-        opcoes = ["Todos"] + bancos
-        self.filtro_banco["values"] = opcoes
-        if self.filtro_banco.get() not in opcoes:
-            self.filtro_banco.set("Todos")
-        self.banco_aplicacao["values"] = bancos
-
-    def adicionar_banco(self) -> None:
-        nome = self.nome_banco.get().strip()
-        if not nome:
-            messagebox.showwarning("Aviso", "Informe o nome do banco.")
-            return
-        self.controller.adicionar_banco(nome)
-        self.nome_banco.delete(0, tk.END)
-        self.carregar_bancos()
-
-    def remover_banco(self) -> None:
-        selecao = self.lista_bancos.curselection()
-        if not selecao:
-            messagebox.showwarning("Aviso", "Selecione um banco.")
-            return
-        nome = self.lista_bancos.get(selecao[0])
-        if messagebox.askyesno("Confirmar", f"Remover o banco '{nome}'?"):
-            self.controller.remover_banco(nome)
-            self.carregar_bancos()

@@ -30,3 +30,12 @@ def data_br(data: date) -> str:
 
 def data_curta(data: date) -> str:
     return data.strftime("%d/%m/%y")
+
+
+def cnpj(valor: str) -> str:
+    digitos = "".join(c for c in valor if c.isdigit())
+    if len(digitos) == 14:
+        return f"{digitos[:2]}.{digitos[2:5]}.{digitos[5:8]}/{digitos[8:12]}-{digitos[12:]}"
+    if len(digitos) == 15:
+        return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}/{digitos[9:13]}-{digitos[13:]}"
+    return valor

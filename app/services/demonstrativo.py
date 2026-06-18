@@ -10,7 +10,7 @@ class MontadorDemonstrativo:
         self.logger: logging.Logger = logger
         self.calculadora = CalculadoraAplicacao(logger=self.logger)
 
-    def montar(self, aplicacoes: list[Aplicacao], data_saldo: date) -> DemonstrativoCarteira:
+    def montar(self, aplicacoes: list[Aplicacao], data_saldo: date, empresas: dict | None = None) -> DemonstrativoCarteira:
         self.logger.info(f"Montando demonstrativo: aplicacoes={len(aplicacoes)} data_saldo={data_saldo}")
         movimentacoes: list[LinhaMovimentacao] = []
         carteira: list[LinhaCarteira] = []
@@ -44,9 +44,11 @@ class MontadorDemonstrativo:
             else:
                 rendimento_percentual = Decimal("0")
 
+            empresa = (empresas or {}).get(aplicacao.empresa_id)
             carteira.append(LinhaCarteira(
                 produto=aplicacao.nome_produto,
                 tipo=aplicacao.tipo_produto.value,
+                banco=aplicacao.banco,
                 data_emissao=aplicacao.data_emissao,
                 data_vencimento=aplicacao.data_vencimento,
                 prazo=aplicacao.prazo_dias_corridos,
@@ -57,7 +59,9 @@ class MontadorDemonstrativo:
                 valor_atualizado=ultima.saldo_bruto,
                 valor_ir=ultima.valor_ir,
                 valor_iof=ultima.valor_iof,
-                resgate_liquido=ultima.saldo_liquido
+                resgate_liquido=ultima.saldo_liquido,
+                empresa_nome=empresa.nome if empresa else "",
+                empresa_cnpj=empresa.cnpj if empresa else "",
             ))
             self.logger.debug(f"Aplicacao {aplicacao.id} adicionada na carteira: saldo_bruto={ultima.saldo_bruto} saldo_liquido={ultima.saldo_liquido}")
 

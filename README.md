@@ -46,11 +46,6 @@ rendimento_dia = saldo × taxa_dia
 - Relatórios gerados para datas **anteriores** ao resgate ainda incluem a aplicação normalmente
 - Resgate pode ser desfeito a qualquer momento
 
-### Gestão de bancos
-- Aba **Bancos** para cadastrar e remover bancos emissores
-- Lista de bancos disponível como campo no formulário de nova aplicação
-- Filtro por banco na tela principal: filtra a tabela e os relatórios gerados
-
 ## Impostos aplicados
 
 | Imposto | Regra |
@@ -65,9 +60,20 @@ rendimento_dia = saldo × taxa_dia
 | CDI diário | 12 |
 | SELIC diária | 11 |
 
+## Banco de dados
+
+O aplicativo utiliza **PostgreSQL** como banco de dados, acessado via **SQLAlchemy**. A conexão é configurada pela variável de ambiente `CARTEIRA_AUTH` no arquivo `.env` na raiz do projeto:
+
+```
+CARTEIRA_AUTH=<credencial em base64>
+```
+
+A credencial é a string `usuario:senha` codificada em Base64.
+
 ## Requisitos
 
 - Python 3.10+
+- PostgreSQL acessível (local ou remoto, ex: [Neon](https://neon.tech))
 - Dependências listadas em `requirements.txt`
 
 ## Instalação
@@ -75,6 +81,8 @@ rendimento_dia = saldo × taxa_dia
 ```bash
 pip install -r requirements.txt
 ```
+
+Crie o arquivo `.env` na raiz do projeto com a variável `CARTEIRA_AUTH` antes de executar.
 
 ## Uso
 
@@ -94,17 +102,17 @@ O `.exe` gerado fica em `dist/`. Execute-o a partir de uma pasta dedicada — as
 
 ```
 app/
-  models/         # entidades de domínio (Aplicacao, PosicaoDiaria, LinhaCarteira, etc.)
+  models/         # entidades de domínio (Aplicacao, Empresa, PosicaoDiaria, etc.)
   controllers/    # CarteiraController — orquestra a lógica de negócio
   services/       # cálculo, demonstrativo, taxas, PDF, Excel
-  repositories/   # persistência em JSON (aplicações, bancos e taxas)
+  repositories/   # persistência (aplicações, empresas, bancos e taxas)
+  manager.py      # gerenciamento da conexão com o PostgreSQL via SQLAlchemy
   utils/          # formatadores, conversores, calendário, impostos
   views/          # interface gráfica (tkinter + sv-ttk)
 data/
-  aplicacoes.json # aplicações cadastradas
-  bancos.json     # bancos cadastrados
   taxas/          # histórico CDI e SELIC em JSON
   pdf/            # relatórios PDF gerados
   excel/          # planilhas Excel geradas
 logs/             # arquivos de log (removidos automaticamente após 7 dias)
+.env              # variáveis de ambiente (credencial do banco de dados)
 ```

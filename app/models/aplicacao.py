@@ -18,12 +18,13 @@ class TipoProduto(str, Enum):
 
 
 class Aplicacao:
-    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", data_resgate: date | None = None, id: str | None = None) -> None:
+    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", data_resgate: date | None = None, id: str | None = None, empresa_id: str = "") -> None:
         self.id = id or str(uuid4())
         self.nome_produto = nome_produto.strip() or "Produto sem nome"
         self.numero_controle = numero_controle.strip()
         self.numero_nota = numero_nota.strip()
         self.banco = banco.strip()
+        self.empresa_id = empresa_id
         self.data_resgate = data_resgate
         self.valor_aplicado = Decimal(valor_aplicado)
         self.data_emissao = data_emissao
@@ -37,8 +38,8 @@ class Aplicacao:
         self.validar()
 
     @classmethod
-    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "") -> "Aplicacao":
-        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, spread_anual=spread_anual, tipo_produto=tipo_produto, banco=banco)
+    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", empresa_id: str = "") -> "Aplicacao":
+        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, spread_anual=spread_anual, tipo_produto=tipo_produto, banco=banco, empresa_id=empresa_id)
 
     def validar(self) -> None:
         if self.valor_aplicado <= 0:
@@ -110,9 +111,10 @@ class LinhaMovimentacao:
 
 
 class LinhaCarteira:
-    def __init__(self, produto: str, tipo: str, data_emissao: date, data_vencimento: date, prazo: int, taxa: str, valor_aplicacao: Decimal, rendimento_bruto_percentual: Decimal, rendimento_bruto: Decimal, valor_atualizado: Decimal, valor_ir: Decimal, valor_iof: Decimal, resgate_liquido: Decimal) -> None:
+    def __init__(self, produto: str, tipo: str, banco: str, data_emissao: date, data_vencimento: date, prazo: int, taxa: str, valor_aplicacao: Decimal, rendimento_bruto_percentual: Decimal, rendimento_bruto: Decimal, valor_atualizado: Decimal, valor_ir: Decimal, valor_iof: Decimal, resgate_liquido: Decimal, empresa_nome: str = "", empresa_cnpj: str = "") -> None:
         self.produto = produto
         self.tipo = tipo
+        self.banco = banco
         self.data_emissao = data_emissao
         self.data_vencimento = data_vencimento
         self.prazo = prazo
@@ -124,6 +126,8 @@ class LinhaCarteira:
         self.valor_ir = valor_ir
         self.valor_iof = valor_iof
         self.resgate_liquido = resgate_liquido
+        self.empresa_nome = empresa_nome
+        self.empresa_cnpj = empresa_cnpj
 
 
 class DemonstrativoCarteira:

@@ -1,0 +1,27 @@
+[
+    {
+        "id": 1,
+        "nome":"EUGENIO RAULINO KOERICH S/A COM E IND",
+        "cnpj":"086184074000140"
+    },
+    {
+        "id": 2,
+        "nome":"RKS EMPREENDIMENTOS E PARTICIPAÇÃO",
+        "cnpj":"007135266000190"
+    },
+    {
+        "id": 3,
+        "nome":"KOERICH LAB TECHNOLOGY LTDA",
+        "cnpj":"041880418000118"
+    },
+    {
+        "id": 4,
+        "nome":"ERK HOLDING S.A",
+        "cnpj":"019438135000161"
+    },
+    {
+        "id": 5,
+        "nome":"KGN EMPREENDIMENTOS IMOBILIARIOS LTDA",
+        "cnpj":"030570682000139"
+    }
+]
