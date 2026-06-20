@@ -90,7 +90,7 @@ class RelatorioDemonstrativoCarteiraPDF:
 
         ultima_linha = len(dados) - 1
 
-        tabela = Table(dados, colWidths=[40 * mm, 20 * mm, 22 * mm, 15 * mm, 15 * mm, 10 * mm, 18 * mm,
+        tabela = Table(dados, colWidths=[22 * mm, 36 * mm, 24 * mm, 15 * mm, 15 * mm, 10 * mm, 18 * mm,
             22 * mm, 18 * mm, 26 * mm, 26 * mm, 15 * mm, 20 * mm, 22 * mm
         ], repeatRows=2)
         estilos = [

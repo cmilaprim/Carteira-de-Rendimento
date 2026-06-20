@@ -49,7 +49,7 @@ class CarteiraController:
         self.repositorio = RepositorioAplicacoes(engine=engine)
         self.repositorio_bancos = RepositorioBancos(engine=engine)
         self.repositorio_empresas = RepositorioEmpresas(engine=engine)
-        self.servico_taxas = ServicoTaxas(logger=self.logger, engine=engine)
+        self.servico_taxas = ServicoTaxas(logger=self.logger)
         self.montador_demonstrativo = MontadorDemonstrativo(logger=self.logger, servico_taxas=self.servico_taxas)
 
     def indexadores(self) -> list[str]:

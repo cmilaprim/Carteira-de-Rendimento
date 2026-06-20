@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
 import logging
-from sqlalchemy import Engine
 from app.utils.calendario import eh_dia_util
 from app.models.aplicacao import Indexador
 from app.services.cliente_bcb import ClienteBancoCentral
@@ -10,10 +9,10 @@ from app.repositories.repositorio_taxas import RepositorioTaxas
 class ServicoTaxas:
     CODIGOS_SGS = {Indexador.CDI.value: 12, Indexador.SELIC.value: 11}
 
-    def __init__(self, logger, engine: Engine):
+    def __init__(self, logger):
         self.logger: logging.Logger = logger
         self.cliente_bcb = ClienteBancoCentral()
-        self.repositorio = RepositorioTaxas(engine=engine)
+        self.repositorio = RepositorioTaxas()
 
     def atualizar(self, indexador: Indexador, data_inicial: date, data_final: date) -> dict[date, Decimal]:
         if indexador.value not in self.CODIGOS_SGS:
