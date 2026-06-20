@@ -1,7 +1,7 @@
 from itertools import groupby
 from pathlib import Path
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from app.models.aplicacao import DemonstrativoCarteira, LinhaCarteira
 from app.utils.formatadores import cnpj, data_curta
@@ -18,10 +18,6 @@ FORMATO_MOEDA = '#,##0.00'
 FORMATO_PERCENTUAL = '0.00%'
 COLUNAS_MOEDA = [8, 10, 11, 12, 13, 14]
 COLUNA_PERCENTUAL = 9
-
-COR_CABECALHO_EMPRESA = "4472C4"
-COR_CABECALHO_TABELA = "BFBFBF"
-COR_TOTAIS = "E6E6E6"
 
 
 class RelatorioExcelCarteira:
@@ -65,18 +61,14 @@ class RelatorioExcelCarteira:
         ws.append([rotulo])
         linha = ws.max_row
         cell = ws.cell(linha, 1)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor=COR_CABECALHO_EMPRESA)
-        cell.alignment = Alignment(horizontal="left")
+        cell.font = Font(bold=True)
         ws.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=len(CABECALHOS))
 
     def _escrever_cabecalho_tabela(self, ws) -> None:
         ws.append(CABECALHOS)
         linha = ws.max_row
-        fill = PatternFill("solid", fgColor=COR_CABECALHO_TABELA)
         for cell in ws[linha]:
             cell.font = Font(bold=True)
-            cell.fill = fill
 
     def _escrever_linhas(self, ws, itens: list[LinhaCarteira]) -> None:
         for item in itens:
@@ -112,9 +104,7 @@ class RelatorioExcelCarteira:
             float(sum(i.resgate_liquido for i in itens))
         ])
         linha = ws.max_row
-        fill = PatternFill("solid", fgColor=COR_TOTAIS)
         for cell in ws[linha]:
             cell.font = Font(bold=True)
-            cell.fill = fill
         for col in COLUNAS_MOEDA:
             ws.cell(linha, col).number_format = FORMATO_MOEDA

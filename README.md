@@ -1,174 +1,213 @@
 # Carteira de Rendimento
 
-Aplicativo desktop desenvolvido para gestão e acompanhamento de aplicações de renda fixa de uma empresa. O sistema permite cadastrar aplicações, calcular o rendimento dia a dia com base nas taxas históricas do Banco Central e exportar relatórios em PDF e Excel.
+Aplicativo desktop desenvolvido para gestão e acompanhamento de aplicações de renda fixa. O sistema permite cadastrar aplicações financeiras, calcular rendimento diário com base nas taxas históricas do Banco Central, apurar impostos automaticamente e gerar relatórios em PDF e Excel.
 
-> Projeto desenvolvido para uso interno da empresa, substituindo o controle manual em planilhas.
+> Projeto desenvolvido para substituir controles manuais em planilhas, centralizando o acompanhamento da carteira em uma aplicação desktop com banco de dados PostgreSQL.
+
+---
+
+## Demonstração
+
+### Tela principal
+
+A tela principal concentra o cadastro de aplicações, filtros por banco e empresa, seleção de data-base para consulta de saldo, listagem da carteira e ações de relatório.
+
+![Tela principal da aplicação](docs/images/tela-principal.png)
+
+### Cadastro e filtros
+
+O sistema permite cadastrar aplicações informando empresa, produto, valor aplicado, tipo de produto, banco emissor, datas de emissão e vencimento, indexador e taxa configurada.
+
+![Cadastro de aplicação](docs/images/cadastro-aplicacao.png)
+
+### Relatórios
+
+A aplicação gera demonstrativos em PDF e exportações em Excel com informações consolidadas da carteira, incluindo rendimento bruto, valor atualizado, impostos e valor líquido de resgate.
+
+![Relatório PDF](docs/images/relatorio-pdf.png)
+
+![Exportação Excel](docs/images/exportacao-excel.png)
 
 ---
 
 ## Funcionalidades
 
 ### Cadastro de aplicações
+
 Cada aplicação registra:
-- Nome do produto, tipo, banco emissor e empresa vinculada
-- Valor aplicado, datas de emissão e vencimento
-- Indexador e sua configuração (percentual, taxa ou spread)
 
-**Tipos de produto suportados:** CDB · Compromissada · LC · Mútuo
+* Nome do produto
+* Tipo da aplicação
+* Banco emissor
+* Empresa vinculada
+* Valor aplicado
+* Datas de emissão e vencimento
+* Indexador
+* Percentual, taxa fixa ou spread
 
-**Indexadores disponíveis:**
+Tipos de produto suportados:
 
-| Indexador | Configuração |
-|---|---|
-| CDI | % do CDI (ex: 110% do CDI) |
-| SELIC | % da SELIC (ex: 100% da SELIC) |
-| SELIC+ | Spread fixo somado à SELIC diária (ex: SELIC + 0,10% a.a.) |
-| Prefixado | Taxa anual fixa (ex: 12,50% a.a.) |
+* CDB
+* Compromissada
+* LC
+* Mútuo
 
-### Cálculo de rendimento
-- Cálculo diário acumulado com base nas taxas históricas do Banco Central (API SGS)
-- Para datas futuras, projeta usando a última taxa disponível
-- Apuração automática de **IOF** e **IR** conforme tabelas regressivas
-- Operações Compromissadas são isentas de IOF
+Indexadores disponíveis:
 
-#### Tabela de IR
-
-| Prazo | Alíquota |
-|---|---|
-| Até 180 dias | 22,5% |
-| 181 a 360 dias | 20,0% |
-| 361 a 720 dias | 17,5% |
-| Acima de 720 dias | 15,0% |
-
-#### IOF
-Tabela regressiva de 96% (dia 1) a 0% a partir do dia 30.
-
-### Relatórios
-- **PDF** — demonstrativo completo da carteira com totais consolidados por empresa
-- **Excel** — planilha com todas as colunas: produto, tipo, banco, datas, taxa, rendimento bruto (% e R$), valor atualizado, IR, IOF e resgate líquido
-
-Selecione as aplicações na lista antes de gerar. Os filtros de banco e empresa se aplicam à lista e ao relatório.
-
-### Gestão de resgates
-- Marque uma aplicação como resgatada informando a data do resgate
-- Aplicações resgatadas aparecem em cinza na lista para histórico
-- Relatórios para datas anteriores ao resgate incluem a aplicação normalmente
-- O resgate pode ser desfeito a qualquer momento
-
-### Cadastros auxiliares
-A tela de **Cadastros** (botão na barra de ações) permite gerenciar:
-- **Empresas** — nome e CNPJ; vinculadas a cada aplicação para filtro e relatório
-- **Bancos** — banco emissor das aplicações; utilizado também como filtro na lista
+| Indexador | Configuração                      |
+| --------- | --------------------------------- |
+| CDI       | Percentual do CDI                 |
+| SELIC     | Percentual da SELIC               |
+| SELIC+    | Spread fixo somado à SELIC diária |
+| Prefixado | Taxa anual fixa                   |
 
 ---
 
-## Stack
+## Cálculo de rendimento
 
-| Camada | Tecnologia |
-|---|---|
-| Interface | Python · Tkinter · [sv-ttk](https://github.com/rdbende/Sun-Valley-ttk-theme) |
-| Banco de dados | PostgreSQL (hospedado no [Neon](https://neon.tech)) |
-| ORM / acesso | SQLAlchemy + psycopg2 |
-| Taxas externas | API pública do Banco Central (SGS) |
-| Relatórios | ReportLab (PDF) · openpyxl (Excel) |
+O sistema calcula o rendimento diário acumulado com base nas taxas históricas disponibilizadas pela API SGS do Banco Central.
+
+Também realiza:
+
+* Projeção para datas futuras usando a última taxa disponível
+* Apuração automática de IOF
+* Apuração automática de IR conforme tabela regressiva
+* Tratamento específico para operações compromissadas isentas de IOF
+* Cálculo de valor atualizado e valor líquido de resgate
+
+---
+
+## Relatórios
+
+O sistema permite gerar:
+
+* **PDF:** demonstrativo completo da carteira, com totais consolidados por empresa
+* **Excel:** planilha detalhada com produto, tipo, banco, datas, taxa, rendimento bruto, valor atualizado, IR, IOF e valor líquido
+
+Os filtros de banco, empresa e data-base são aplicados tanto na listagem quanto nos relatórios.
+
+---
+
+## Gestão de resgates
+
+A aplicação permite marcar uma aplicação como resgatada, informando a data do resgate.
+
+Aplicações resgatadas permanecem no histórico e podem ser consideradas ou ignoradas nos relatórios conforme a data-base selecionada.
+
+---
+
+## Cadastros auxiliares
+
+O sistema possui uma tela de cadastros para gerenciar:
+
+* Empresas
+* Bancos emissores
+
+Esses cadastros são utilizados nos filtros, relatórios e vínculos das aplicações.
 
 ---
 
 ## Arquitetura
 
-O projeto segue o padrão **MVC** com **Injeção de Dependências**. O `main.py` é a raiz de composição: cria a conexão com o banco, instancia os repositórios, serviços e controller, e os injeta na view.
+O projeto segue o padrão MVC com injeção de dependências.
 
-```
+O arquivo `main.py` atua como raiz de composição da aplicação, criando a conexão com o banco, instanciando repositórios, serviços e controller, e injetando as dependências na interface.
+
+```text
 main.py  →  CarteiraController  →  Repositórios  →  PostgreSQL
                     ↓
-             Serviços (cálculo, taxas, PDF, Excel)
+             Serviços de cálculo, taxas, PDF e Excel
                     ↓
-         AplicativoCarteira (Tkinter)
+              Interface Tkinter
 ```
 
-```
+Estrutura simplificada:
+
+```text
 app/
-  models/         # entidades de domínio (Aplicacao, Empresa)
-  controllers/    # CarteiraController — orquestra a lógica de negócio
-  repositories/   # acesso ao banco (aplicações, empresas, bancos, taxas)
-  services/       # calculadora, demonstrativo, taxas BCB, PDF, Excel
-  utils/          # formatadores, conversores, máscaras de input, impostos
-  views/          # interface gráfica (tela principal e cadastros)
-  manager.py      # gerenciamento da conexão SQLAlchemy
-  logger.py       # configuração de logs
-config.py         # leitura de variáveis de ambiente
-main.py           # ponto de entrada e composição
-```
-
-### Tabelas do banco de dados
-
-```sql
-d_empresa    -- empresas cadastradas
-d_banco      -- bancos cadastrados
-f_aplicacao  -- aplicações de renda fixa (FK para empresa e banco)
-f_taxa       -- histórico de taxas CDI e SELIC por data
+  models/
+  controllers/
+  repositories/
+  services/
+  utils/
+  views/
+  manager.py
+  logger.py
+config.py
+main.py
+schema.sql
 ```
 
 ---
 
-## Configuração
+## Banco de dados
+
+Principais tabelas utilizadas:
+
+```sql
+d_empresa
+d_banco
+f_aplicacao
+f_taxa
+```
+
+---
+
+## Como executar
 
 ### Pré-requisitos
-- Python 3.10+
-- Instância PostgreSQL acessível (local ou remoto)
 
-### Arquivo de configuração
-Copie o exemplo e preencha com os dados do seu banco:
-```bash
-cp config.example.toml config.toml
-```
-
-```toml
-[conexoes]
-servidor = "seu-servidor.neon.tech"
-banco = "nome_do_banco"
-```
-
-### Variável de ambiente
-Crie o arquivo `.env` na raiz do projeto:
-```
-CARTEIRA_AUTH=<usuario:senha em base64>
-```
-
-A credencial é a string `usuario:senha` codificada em Base64.
-
-### Criar as tabelas
-Execute o script `schema.sql` no seu banco PostgreSQL:
-```bash
-psql -h <servidor> -U <usuario> -d <banco> -f schema.sql
-```
-Ou cole o conteúdo do arquivo diretamente no cliente de sua preferência (DBeaver, psql, etc.).
+* Python 3.10+
+* PostgreSQL local ou remoto
 
 ### Instalação
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### Execução
+### Configuração
+
+Crie o arquivo `config.toml` com os dados de conexão:
+
+```toml
+[conexoes]
+servidor = "seu-servidor"
+banco = "nome_do_banco"
+```
+
+Crie também o arquivo `.env`:
+
+```env
+CARTEIRA_AUTH=<usuario:senha em base64>
+```
+
+### Criar as tabelas
+
+Execute o script `schema.sql` no banco PostgreSQL.
+
+```bash
+psql -h <servidor> -U <usuario> -d <banco> -f schema.sql
+```
+
+### Rodar o projeto
+
 ```bash
 python main.py
 ```
 
 ---
 
-## Gerar executável (.exe)
+## Gerar executável
 
 ```bash
 python -m PyInstaller --onefile --windowed --name "Carteira de Rendimento" main.py
 ```
 
-O executável gerado fica em `dist/`. Execute-o a partir de uma pasta dedicada — as pastas `data/pdf/`, `data/excel/` e `logs/` são criadas automaticamente ao lado do executável na primeira execução.
+O executável será gerado na pasta `dist/`.
 
 ---
 
-## Séries do Banco Central utilizadas
+## Observações
 
-| Indexador | Série SGS |
-|---|---|
-| CDI diário | 12 |
-| SELIC diária | 11 |
+Este projeto foi desenvolvido com foco em uma necessidade real de negócio: automatizar o acompanhamento de aplicações financeiras, reduzir controles manuais e gerar relatórios padronizados para análise da carteira.

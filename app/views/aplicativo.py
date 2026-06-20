@@ -53,6 +53,7 @@ class AplicativoCarteira(tk.Tk):
         ttk.Label(formulario, text="Empresa").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
         self.empresa_aplicacao = ttk.Combobox(formulario, values=[], state="readonly", width=36)
         self.empresa_aplicacao.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=6)
+        self._sem_selecao(self.empresa_aplicacao)
 
         self.nome_produto = self.campo(formulario, "Produto", 0, 2, largura=28)
         self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 4, largura=16)
@@ -63,6 +64,7 @@ class AplicativoCarteira(tk.Tk):
         self.tipo_produto = ttk.Combobox(formulario, values=opcoes_tipo, state="readonly", width=14)
         self.tipo_produto.set(opcoes_tipo[0])
         self.tipo_produto.grid(row=0, column=7, sticky="ew", padx=(4, 14), pady=6)
+        self._sem_selecao(self.tipo_produto)
 
         # Linha 1: Emissao | Vencimento | Indexador | Banco
         self.data_emissao = self.campo_data(formulario, "Emissao", 1, 0)
@@ -74,6 +76,7 @@ class AplicativoCarteira(tk.Tk):
         self.indexador.set(opcoes_indexadores[0])
         self.indexador.grid(row=1, column=5, sticky="ew", padx=(4, 10), pady=6)
         self.indexador.bind("<<ComboboxSelected>>", self.ao_mudar_indexador)
+        self._sem_selecao(self.indexador)
 
         ttk.Label(formulario, text="Banco").grid(row=1, column=6, sticky="w", padx=(10, 4), pady=6)
         self.banco_aplicacao = ttk.Combobox(formulario, values=[], width=14)
@@ -117,6 +120,7 @@ class AplicativoCarteira(tk.Tk):
         self.filtro_empresa.set("Todas")
         self.filtro_empresa.pack(side=tk.LEFT)
         self.filtro_empresa.bind("<<ComboboxSelected>>", lambda _e: self.carregar_lista())
+        self._sem_selecao(self.filtro_empresa)
 
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
 
@@ -197,6 +201,9 @@ class AplicativoCarteira(tk.Tk):
             self.percentual_indexador.configure(state="normal")
             self.label_taxa.configure(text="Taxa a.a.")
             self.taxa_prefixada.configure(state="disabled")
+
+    def _sem_selecao(self, combo: ttk.Combobox):
+        combo.bind("<<ComboboxSelected>>", lambda _: combo.selection_clear())
 
     def configurar_autocomplete_banco(self, combobox: ttk.Combobox, incluir_todos: bool = False, ao_alterar=None):
         def filtrar(event=None):

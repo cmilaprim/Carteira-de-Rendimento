@@ -19,7 +19,7 @@ class Manager:
         self.senha_carteira = self.configurator.credenciais_carteira["senha"]
 
     def conecta_carteira(self) -> Engine:
-        engine = create_engine(url=f"postgresql+psycopg2://{self.usuario_carteira}:{self.senha_carteira}@{self.servidor_carteira}/{self.banco_carteira}", client_encoding="utf8", connect_args={"sslmode": "require", "channel_binding": "require"})
+        engine = create_engine(url=f"postgresql+psycopg2://{self.usuario_carteira}:{self.senha_carteira}@{self.servidor_carteira}/{self.banco_carteira}", client_encoding="utf8", connect_args={"sslmode": "require", "channel_binding": "require"}, pool_pre_ping=True)
         self.logger.info("Conexao com o banco de dados da carteira estabelecida com sucesso.")
         return engine
     
