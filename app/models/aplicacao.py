@@ -2,7 +2,6 @@
 from datetime import date
 from decimal import Decimal
 from enum import Enum
-from uuid import uuid4
 
 
 class Indexador(str, Enum):
@@ -15,15 +14,16 @@ class Indexador(str, Enum):
 class TipoProduto(str, Enum):
     CDB = "CDB"
     COMPROMISSADA = "COMPROMISSADA"
+    LC = "LC"
+    MUTUO = "MÚTUO"
 
 
 class Aplicacao:
-    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", data_resgate: date | None = None, id: str | None = None, empresa_id: str = "") -> None:
-        self.id = id or str(uuid4())
+    def __init__(self, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco_id: int | None = None, banco: str = "", data_resgate: date | None = None, id: str | None = None, empresa_id: str = "") -> None:
+        self.id = id
         self.nome_produto = nome_produto.strip() or "Produto sem nome"
-        self.numero_controle = numero_controle.strip()
-        self.numero_nota = numero_nota.strip()
-        self.banco = banco.strip()
+        self.banco_id = banco_id
+        self.banco = banco
         self.empresa_id = empresa_id
         self.data_resgate = data_resgate
         self.valor_aplicado = Decimal(valor_aplicado)
@@ -38,8 +38,8 @@ class Aplicacao:
         self.validar()
 
     @classmethod
-    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), numero_controle: str = "", numero_nota: str = "", taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco: str = "", empresa_id: str = "") -> "Aplicacao":
-        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, numero_controle=numero_controle, numero_nota=numero_nota, taxa_prefixada_anual=taxa_prefixada_anual, spread_anual=spread_anual, tipo_produto=tipo_produto, banco=banco, empresa_id=empresa_id)
+    def criar(cls, nome_produto: str, valor_aplicado: Decimal, data_emissao: date, data_vencimento: date, indexador: Indexador, percentual_indexador: Decimal = Decimal("100"), taxa_prefixada_anual: Decimal | None = None, spread_anual: Decimal | None = None, tipo_produto: TipoProduto = TipoProduto.CDB, banco_id: int | None = None, banco: str = "", empresa_id: str = "") -> "Aplicacao":
+        return cls(nome_produto=nome_produto, valor_aplicado=valor_aplicado, data_emissao=data_emissao, data_vencimento=data_vencimento, indexador=indexador, percentual_indexador=percentual_indexador, taxa_prefixada_anual=taxa_prefixada_anual, spread_anual=spread_anual, tipo_produto=tipo_produto, banco_id=banco_id, banco=banco, empresa_id=empresa_id)
 
     def validar(self) -> None:
         if self.valor_aplicado <= 0:

@@ -1,57 +1,163 @@
 # Carteira de Rendimento
 
-Aplicativo desktop para gestão e acompanhamento de aplicações de renda fixa indexadas ao CDI, SELIC, SELIC+ ou taxa prefixada.
+Aplicativo desktop desenvolvido para gestão e acompanhamento de aplicações de renda fixa de uma empresa. O sistema permite cadastrar aplicações, calcular o rendimento dia a dia com base nas taxas históricas do Banco Central e exportar relatórios em PDF e Excel.
 
-## O que faz
+> Projeto desenvolvido para uso interno da empresa, substituindo o controle manual em planilhas.
 
-Permite cadastrar aplicações de renda fixa e acompanhar o rendimento dia a dia, com cálculo automático de impostos, projeção de saldo futuro e exportação de relatórios em PDF e Excel.
+---
 
 ## Funcionalidades
 
 ### Cadastro de aplicações
-- Produto, valor aplicado, datas de emissão e vencimento
-- Tipos suportados: **CDB** e **Operação Compromissada** (isenta de IOF)
-- Indexadores: **CDI**, **SELIC**, **SELIC+** e **Prefixado** (% a.a.)
-  - CDI e SELIC: percentual do indexador configurável (ex: 110% do CDI)
-  - SELIC+: spread fixo anual somado à SELIC diária (ex: SELIC + 0,10% a.a.)
-  - Prefixado: taxa anual fixa
-- Banco emissor selecionável (cadastrado previamente na aba Bancos)
+Cada aplicação registra:
+- Nome do produto, tipo, banco emissor e empresa vinculada
+- Valor aplicado, datas de emissão e vencimento
+- Indexador e sua configuração (percentual, taxa ou spread)
+
+**Tipos de produto suportados:** CDB · Compromissada · LC · Mútuo
+
+**Indexadores disponíveis:**
+
+| Indexador | Configuração |
+|---|---|
+| CDI | % do CDI (ex: 110% do CDI) |
+| SELIC | % da SELIC (ex: 100% da SELIC) |
+| SELIC+ | Spread fixo somado à SELIC diária (ex: SELIC + 0,10% a.a.) |
+| Prefixado | Taxa anual fixa (ex: 12,50% a.a.) |
 
 ### Cálculo de rendimento
-- Cálculo diário com base nas taxas históricas do Banco Central (SGS)
-- Projeção automática para datas futuras usando a última taxa conhecida
-- Apuração de **IOF** (tabela regressiva de 30 dias) e **IR** (tabela regressiva por prazo)
-- Operações Compromissadas não sofrem IOF
+- Cálculo diário acumulado com base nas taxas históricas do Banco Central (API SGS)
+- Para datas futuras, projeta usando a última taxa disponível
+- Apuração automática de **IOF** e **IR** conforme tabelas regressivas
+- Operações Compromissadas são isentas de IOF
 
-#### Fórmula SELIC+
-O spread é acumulado diariamente de forma composta e somado à taxa SELIC do dia:
+#### Tabela de IR
 
-```
-taxa_dia = selic_dia + (1 + spread_anual / 100) ^ (1 / 252) - 1
-rendimento_dia = saldo × taxa_dia
-```
+| Prazo | Alíquota |
+|---|---|
+| Até 180 dias | 22,5% |
+| 181 a 360 dias | 20,0% |
+| 361 a 720 dias | 17,5% |
+| Acima de 720 dias | 15,0% |
 
-### Taxas CDI/SELIC
-- Busca automática via API do Banco Central na primeira vez que uma data é calculada
-- Taxas armazenadas localmente em JSON
+#### IOF
+Tabela regressiva de 96% (dia 1) a 0% a partir do dia 30.
 
 ### Relatórios
-- **PDF** da carteira completa com totais consolidados
-- **Excel** com todas as colunas (produto, tipo, datas, taxa, rendimento bruto em % e R$, valor atualizado, IR, IOF, resgate líquido)
-- Filtro por banco: selecione um banco na barra de ações para gerar relatórios apenas das aplicações filtradas
+- **PDF** — demonstrativo completo da carteira com totais consolidados por empresa
+- **Excel** — planilha com todas as colunas: produto, tipo, banco, datas, taxa, rendimento bruto (% e R$), valor atualizado, IR, IOF e resgate líquido
+
+Selecione as aplicações na lista antes de gerar. Os filtros de banco e empresa se aplicam à lista e ao relatório.
 
 ### Gestão de resgates
 - Marque uma aplicação como resgatada informando a data do resgate
-- Aplicações resgatadas aparecem em cinza na lista mas **não somem** — ficam visíveis para histórico
-- Relatórios gerados para datas **anteriores** ao resgate ainda incluem a aplicação normalmente
-- Resgate pode ser desfeito a qualquer momento
+- Aplicações resgatadas aparecem em cinza na lista para histórico
+- Relatórios para datas anteriores ao resgate incluem a aplicação normalmente
+- O resgate pode ser desfeito a qualquer momento
 
-## Impostos aplicados
+### Cadastros auxiliares
+A tela de **Cadastros** (botão na barra de ações) permite gerenciar:
+- **Empresas** — nome e CNPJ; vinculadas a cada aplicação para filtro e relatório
+- **Bancos** — banco emissor das aplicações; utilizado também como filtro na lista
 
-| Imposto | Regra |
+---
+
+## Stack
+
+| Camada | Tecnologia |
 |---|---|
-| IOF | Tabela regressiva de 96% (dia 1) a 0% (dia 30+). Isento para Compromissadas. |
-| IR | 22,5% até 180 dias / 20% até 360 dias / 17,5% até 720 dias / 15% acima de 720 dias |
+| Interface | Python · Tkinter · [sv-ttk](https://github.com/rdbende/Sun-Valley-ttk-theme) |
+| Banco de dados | PostgreSQL (hospedado no [Neon](https://neon.tech)) |
+| ORM / acesso | SQLAlchemy + psycopg2 |
+| Taxas externas | API pública do Banco Central (SGS) |
+| Relatórios | ReportLab (PDF) · openpyxl (Excel) |
+
+---
+
+## Arquitetura
+
+O projeto segue o padrão **MVC** com **Injeção de Dependências**. O `main.py` é a raiz de composição: cria a conexão com o banco, instancia os repositórios, serviços e controller, e os injeta na view.
+
+```
+main.py  →  CarteiraController  →  Repositórios  →  PostgreSQL
+                    ↓
+             Serviços (cálculo, taxas, PDF, Excel)
+                    ↓
+         AplicativoCarteira (Tkinter)
+```
+
+```
+app/
+  models/         # entidades de domínio (Aplicacao, Empresa)
+  controllers/    # CarteiraController — orquestra a lógica de negócio
+  repositories/   # acesso ao banco (aplicações, empresas, bancos, taxas)
+  services/       # calculadora, demonstrativo, taxas BCB, PDF, Excel
+  utils/          # formatadores, conversores, máscaras de input, impostos
+  views/          # interface gráfica (tela principal e cadastros)
+  manager.py      # gerenciamento da conexão SQLAlchemy
+  logger.py       # configuração de logs
+config.py         # leitura de variáveis de ambiente
+main.py           # ponto de entrada e composição
+```
+
+### Tabelas do banco de dados
+
+```sql
+d_empresa    -- empresas cadastradas
+d_banco      -- bancos cadastrados
+f_aplicacao  -- aplicações de renda fixa (FK para empresa e banco)
+f_taxa       -- histórico de taxas CDI e SELIC por data
+```
+
+---
+
+## Configuração
+
+### Pré-requisitos
+- Python 3.10+
+- Instância PostgreSQL acessível (local ou remoto)
+
+### Arquivo de configuração
+Copie o exemplo e preencha com os dados do seu banco:
+```bash
+cp config.example.toml config.toml
+```
+
+```toml
+[conexoes]
+servidor = "seu-servidor.neon.tech"
+banco = "nome_do_banco"
+```
+
+### Variável de ambiente
+Crie o arquivo `.env` na raiz do projeto:
+```
+CARTEIRA_AUTH=<usuario:senha em base64>
+```
+
+A credencial é a string `usuario:senha` codificada em Base64.
+
+### Instalação
+```bash
+pip install -r requirements.txt
+```
+
+### Execução
+```bash
+python main.py
+```
+
+---
+
+## Gerar executável (.exe)
+
+```bash
+python -m PyInstaller --onefile --windowed --name "Carteira de Rendimento" main.py
+```
+
+O executável gerado fica em `dist/`. Execute-o a partir de uma pasta dedicada — as pastas `data/pdf/`, `data/excel/` e `logs/` são criadas automaticamente ao lado do executável na primeira execução.
+
+---
 
 ## Séries do Banco Central utilizadas
 
@@ -59,60 +165,3 @@ rendimento_dia = saldo × taxa_dia
 |---|---|
 | CDI diário | 12 |
 | SELIC diária | 11 |
-
-## Banco de dados
-
-O aplicativo utiliza **PostgreSQL** como banco de dados, acessado via **SQLAlchemy**. A conexão é configurada pela variável de ambiente `CARTEIRA_AUTH` no arquivo `.env` na raiz do projeto:
-
-```
-CARTEIRA_AUTH=<credencial em base64>
-```
-
-A credencial é a string `usuario:senha` codificada em Base64.
-
-## Requisitos
-
-- Python 3.10+
-- PostgreSQL acessível (local ou remoto, ex: [Neon](https://neon.tech))
-- Dependências listadas em `requirements.txt`
-
-## Instalação
-
-```bash
-pip install -r requirements.txt
-```
-
-Crie o arquivo `.env` na raiz do projeto com a variável `CARTEIRA_AUTH` antes de executar.
-
-## Uso
-
-```bash
-python main.py
-```
-
-## Gerar executável
-
-```bash
-python -m PyInstaller --onefile --windowed --name "Carteira de Rendimento" main.py
-```
-
-O `.exe` gerado fica em `dist/`. Execute-o a partir de uma pasta dedicada — as pastas `data/`, `data/pdf/`, `data/excel/` e `logs/` são criadas automaticamente ao lado do executável na primeira execução.
-
-## Estrutura
-
-```
-app/
-  models/         # entidades de domínio (Aplicacao, Empresa, PosicaoDiaria, etc.)
-  controllers/    # CarteiraController — orquestra a lógica de negócio
-  services/       # cálculo, demonstrativo, taxas, PDF, Excel
-  repositories/   # persistência (aplicações, empresas, bancos e taxas)
-  manager.py      # gerenciamento da conexão com o PostgreSQL via SQLAlchemy
-  utils/          # formatadores, conversores, calendário, impostos
-  views/          # interface gráfica (tkinter + sv-ttk)
-data/
-  taxas/          # histórico CDI e SELIC em JSON
-  pdf/            # relatórios PDF gerados
-  excel/          # planilhas Excel geradas
-logs/             # arquivos de log (removidos automaticamente após 7 dias)
-.env              # variáveis de ambiente (credencial do banco de dados)
-```

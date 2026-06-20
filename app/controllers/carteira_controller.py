@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from sqlalchemy import Engine
 from app.utils.conversores import texto_para_data, texto_para_decimal
 from app.utils.formatadores import data_br, moeda_com_simbolo
 from app.models.aplicacao import Aplicacao, Indexador, TipoProduto
@@ -43,13 +44,13 @@ class LinhaAplicacaoLista:
 
 
 class CarteiraController:
-    def __init__(self, logger):
+    def __init__(self, logger, engine: Engine):
         self.logger: logging.Logger = logger
-        self.repositorio = RepositorioAplicacoes()
-        self.repositorio_bancos = RepositorioBancos()
-        self.repositorio_empresas = RepositorioEmpresas()
-        self.servico_taxas = ServicoTaxas(logger=self.logger)
-        self.montador_demonstrativo = MontadorDemonstrativo(logger=self.logger)
+        self.repositorio = RepositorioAplicacoes(engine=engine)
+        self.repositorio_bancos = RepositorioBancos(engine=engine)
+        self.repositorio_empresas = RepositorioEmpresas(engine=engine)
+        self.servico_taxas = ServicoTaxas(logger=self.logger, engine=engine)
+        self.montador_demonstrativo = MontadorDemonstrativo(logger=self.logger, servico_taxas=self.servico_taxas)
 
     def indexadores(self) -> list[str]:
         return [item.value for item in Indexador]
@@ -59,6 +60,12 @@ class CarteiraController:
 
     def listar_bancos(self) -> list[str]:
         return self.repositorio_bancos.listar()
+
+    def adicionar_banco(self, nome: str) -> None:
+        self.repositorio_bancos.adicionar(nome)
+
+    def excluir_banco(self, nome: str) -> None:
+        self.repositorio_bancos.excluir(nome)
 
     def listar_empresas(self) -> list[Empresa]:
         return self.repositorio_empresas.listar()
@@ -97,6 +104,7 @@ class CarteiraController:
             taxa_prefixada_anual=taxa_prefixada,
             spread_anual=spread_anual,
             tipo_produto=TipoProduto(dados.tipo_produto),
+            banco_id=self.repositorio_bancos.obter_id_por_nome(dados.banco),
             banco=dados.banco,
             empresa_id=dados.empresa_id
         )
@@ -135,7 +143,8 @@ class CarteiraController:
         apl.taxa_prefixada_anual = taxa_prefixada
         apl.spread_anual = spread_anual
         apl.tipo_produto = TipoProduto(dados.tipo_produto)
-        apl.banco = dados.banco.strip()
+        apl.banco_id = self.repositorio_bancos.obter_id_por_nome(dados.banco)
+        apl.banco = dados.banco
         apl.empresa_id = dados.empresa_id
         apl.validar()
         self.repositorio.atualizar(apl)

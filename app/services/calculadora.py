@@ -10,9 +10,9 @@ getcontext().prec = 28
 
 
 class CalculadoraAplicacao:
-    def __init__(self, logger):
+    def __init__(self, logger, servico_taxas: ServicoTaxas):
         self.logger: logging.Logger = logger
-        self.servico_taxas = ServicoTaxas(logger=self.logger)
+        self.servico_taxas = servico_taxas
 
     def buscar_taxa_com_defasagem(self, taxas_por_data: dict[date, Decimal], data_atual: date, defasagem_dias: int = 1) -> tuple[date, Decimal] | None:
         data_taxa = data_atual - timedelta(days=defasagem_dias)
@@ -29,7 +29,7 @@ class CalculadoraAplicacao:
     def calcular(self, aplicacao: Aplicacao, data_posicao: date | None = None, projetar_com_ultima_taxa: bool = True, tentar_atualizar_taxas: bool = True) -> list[PosicaoDiaria]:
         aplicacao.validar()
         data_final = data_posicao or aplicacao.data_vencimento
-        self.logger.info(f"Calculando aplicacao {aplicacao.id}: controle={aplicacao.numero_controle} indexador={aplicacao.indexador.value} emissao={aplicacao.data_emissao} data_final={data_final}")
+        self.logger.info(f"Calculando aplicacao {aplicacao.id}: indexador={aplicacao.indexador.value} emissao={aplicacao.data_emissao} data_final={data_final}")
         if data_final < aplicacao.data_emissao:
             self.logger.error(f"Data de posicao anterior a emissao: aplicacao={aplicacao.id} emissao={aplicacao.data_emissao} data_final={data_final}")
             raise ValueError("A data de posicao nao pode ser anterior a data de emissao.")

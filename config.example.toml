@@ -1,0 +1,3 @@
+[conexoes]
+servidor = "seu-servidor"
+banco = "nome_do_banco"

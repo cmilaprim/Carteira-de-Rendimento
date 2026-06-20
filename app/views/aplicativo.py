@@ -9,21 +9,27 @@ from tkcalendar import DateEntry
 from app.controllers.carteira_controller import CarteiraController, DadosAplicacaoFormulario
 from app.utils.abridor_arquivo import abrir_arquivo
 from app.utils.conversores import texto_para_data
+from app.utils.formatadores import data_br
+from app.utils.mascaras import decimal_para_br, mascara_data, mascara_decimal
+from app.views.tela_cadastros import TelaCadastros
 
 
 class AplicativoCarteira(tk.Tk):
-    def __init__(self, logger):
+    def __init__(self, logger, controller: CarteiraController):
         super().__init__()
         self.withdraw()
         self.logger: logging.Logger = logger
         self.title("Carteira de Aplicações")
         self.minsize(1000, 580)
         sv_ttk.set_theme("light")
-        self.controller = CarteiraController(logger=self.logger)
+        self.controller = controller
         self._mapa_empresas: dict[str, str] = {}
         self.montar_tela()
         self.carregar_lista()
-        self.attributes('-zoomed', True)
+        try:
+            self.state('zoomed') 
+        except:
+            self.attributes('-zoomed', True)
         self.deiconify()
 
     def montar_tela(self) -> None:
@@ -50,6 +56,7 @@ class AplicativoCarteira(tk.Tk):
 
         self.nome_produto = self.campo(formulario, "Produto", 0, 2, largura=28)
         self.valor_aplicado = self.campo(formulario, "Valor aplicado", 0, 4, largura=16)
+        mascara_decimal(self.valor_aplicado)
 
         ttk.Label(formulario, text="Tipo").grid(row=0, column=6, sticky="w", padx=(10, 4), pady=6)
         opcoes_tipo = self.controller.tipos_produto()
@@ -78,6 +85,7 @@ class AplicativoCarteira(tk.Tk):
         self.percentual_indexador = ttk.Entry(formulario, width=12)
         self.percentual_indexador.grid(row=2, column=1, sticky="ew", padx=(4, 10), pady=6)
         self.percentual_indexador.insert(0, "100")
+        mascara_decimal(self.percentual_indexador)
 
         self.label_taxa = ttk.Label(formulario, text="Taxa a.a.")
         self.label_taxa.grid(row=2, column=2, sticky="w", padx=(10, 4), pady=6)
@@ -124,7 +132,7 @@ class AplicativoCarteira(tk.Tk):
 
         ttk.Separator(acoes, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, padx=14, pady=2)
 
-        ttk.Button(acoes, text="Empresas", command=self.abrir_gerenciar_empresas).pack(side=tk.LEFT, padx=3)
+        ttk.Button(acoes, text="Cadastros", command=self.abrir_cadastros).pack(side=tk.LEFT, padx=3)
 
         # Lista de aplicações
         lista_frame = ttk.LabelFrame(pai, text="Aplicações cadastradas")
@@ -169,8 +177,10 @@ class AplicativoCarteira(tk.Tk):
 
     def campo_data(self, pai, rotulo: str, linha: int, coluna: int):
         ttk.Label(pai, text=rotulo).grid(row=linha, column=coluna, sticky="w", padx=(10, 4), pady=6)
-        entrada = DateEntry(pai, date_pattern="dd/mm/yyyy", width=14)
-        entrada.grid(row=linha, column=coluna + 1, sticky="w", padx=(4, 10), pady=6)
+        entrada = ttk.Entry(pai, width=14)
+        entrada.insert(0, date.today().strftime("%d/%m/%Y"))
+        entrada.grid(row=linha, column=coluna + 1, sticky="ew", padx=(4, 10), pady=6)
+        mascara_data(entrada)
         return entrada
 
     def ao_mudar_indexador(self, _event=None) -> None:
@@ -347,7 +357,8 @@ class AplicativoCarteira(tk.Tk):
 
         ttk.Label(frame, text="Valor aplicado").grid(row=0, column=2, sticky="w", padx=(10, 4), pady=6)
         valor_dlg = ttk.Entry(frame, width=16)
-        valor_dlg.insert(0, str(apl.valor_aplicado))
+        valor_dlg.insert(0, decimal_para_br(apl.valor_aplicado))
+        mascara_decimal(valor_dlg)
         valor_dlg.grid(row=0, column=3, sticky="ew", padx=(4, 10), pady=6)
 
         ttk.Label(frame, text="Tipo").grid(row=0, column=4, sticky="w", padx=(10, 4), pady=6)
@@ -363,14 +374,16 @@ class AplicativoCarteira(tk.Tk):
 
         # Linha 1: Emissao | Vencimento | Indexador | Produto
         ttk.Label(frame, text="Emissao").grid(row=1, column=0, sticky="w", padx=(10, 4), pady=6)
-        emissao_dlg = DateEntry(frame, date_pattern="dd/mm/yyyy", width=14)
-        emissao_dlg.set_date(apl.data_emissao)
-        emissao_dlg.grid(row=1, column=1, sticky="w", padx=(4, 10), pady=6)
+        emissao_dlg = ttk.Entry(frame, width=14)
+        emissao_dlg.insert(0, data_br(apl.data_emissao))
+        mascara_data(emissao_dlg)
+        emissao_dlg.grid(row=1, column=1, sticky="ew", padx=(4, 10), pady=6)
 
         ttk.Label(frame, text="Vencimento").grid(row=1, column=2, sticky="w", padx=(10, 4), pady=6)
-        vencimento_dlg = DateEntry(frame, date_pattern="dd/mm/yyyy", width=14)
-        vencimento_dlg.set_date(apl.data_vencimento)
-        vencimento_dlg.grid(row=1, column=3, sticky="w", padx=(4, 10), pady=6)
+        vencimento_dlg = ttk.Entry(frame, width=14)
+        vencimento_dlg.insert(0, data_br(apl.data_vencimento))
+        mascara_data(vencimento_dlg)
+        vencimento_dlg.grid(row=1, column=3, sticky="ew", padx=(4, 10), pady=6)
 
         ttk.Label(frame, text="Indexador").grid(row=1, column=4, sticky="w", padx=(10, 4), pady=6)
         indexador_dlg = ttk.Combobox(frame, values=self.controller.indexadores(), state="readonly", width=14)
@@ -386,25 +399,27 @@ class AplicativoCarteira(tk.Tk):
         label_pct_dlg = ttk.Label(frame, text="% indexador")
         label_pct_dlg.grid(row=2, column=0, sticky="w", padx=(10, 4), pady=6)
         percentual_dlg = ttk.Entry(frame, width=12)
+        mascara_decimal(percentual_dlg)
         percentual_dlg.grid(row=2, column=1, sticky="ew", padx=(4, 10), pady=6)
 
         label_taxa_dlg = ttk.Label(frame, text="Taxa a.a.")
         label_taxa_dlg.grid(row=2, column=2, sticky="w", padx=(10, 4), pady=6)
         taxa_dlg = ttk.Entry(frame, width=12)
+        mascara_decimal(taxa_dlg)
         taxa_dlg.grid(row=2, column=3, sticky="ew", padx=(4, 10), pady=6)
 
         idx_val = apl.indexador.value
         if idx_val == "PREFIXADO":
-            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            percentual_dlg.insert(0, decimal_para_br(apl.percentual_indexador))
             percentual_dlg.configure(state="disabled")
-            taxa_dlg.insert(0, str(apl.taxa_prefixada_anual or ""))
+            taxa_dlg.insert(0, decimal_para_br(apl.taxa_prefixada_anual) if apl.taxa_prefixada_anual else "")
         elif idx_val == "SELIC+":
-            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            percentual_dlg.insert(0, decimal_para_br(apl.percentual_indexador))
             percentual_dlg.configure(state="disabled")
             label_taxa_dlg.configure(text="Spread a.a.")
-            taxa_dlg.insert(0, str(apl.spread_anual or ""))
+            taxa_dlg.insert(0, decimal_para_br(apl.spread_anual) if apl.spread_anual else "")
         else:
-            percentual_dlg.insert(0, str(apl.percentual_indexador))
+            percentual_dlg.insert(0, decimal_para_br(apl.percentual_indexador))
             taxa_dlg.configure(state="disabled")
 
         def ao_mudar_indexador_dlg(_event=None):
@@ -456,77 +471,12 @@ class AplicativoCarteira(tk.Tk):
         ttk.Button(btn_frame, text="Salvar", command=salvar_edicao).pack(side=tk.LEFT, padx=(0, 4), fill=tk.X, expand=True)
         ttk.Button(btn_frame, text="Cancelar", command=dlg.destroy).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-    # ── Dialog de gerenciamento de empresas ───────────────────────────────────
+    def abrir_cadastros(self) -> None:
+        def ao_atualizar():
+            self.atualizar_opcoes_empresa()
+            self.atualizar_opcoes_banco()
 
-    def abrir_gerenciar_empresas(self) -> None:
-        dlg = tk.Toplevel(self)
-        dlg.title("Gerenciar Empresas")
-        dlg.geometry("520x420")
-        dlg.resizable(True, True)
-        dlg.grab_set()
-
-        lista_frame = ttk.LabelFrame(dlg, text="Empresas cadastradas")
-        lista_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(14, 6))
-
-        colunas_emp = ("nome", "cnpj")
-        lista_emp = ttk.Treeview(lista_frame, columns=colunas_emp, show="headings", height=10)
-        lista_emp.heading("nome", text="Nome")
-        lista_emp.heading("cnpj", text="CNPJ")
-        lista_emp.column("nome", width=270)
-        lista_emp.column("cnpj", width=170)
-        lista_emp.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
-
-        def carregar_empresas_dlg():
-            for item in lista_emp.get_children():
-                lista_emp.delete(item)
-            for emp in self.controller.listar_empresas():
-                lista_emp.insert("", tk.END, iid=emp.id, values=(emp.nome, emp.cnpj_formatado))
-
-        carregar_empresas_dlg()
-
-        form_frame = ttk.LabelFrame(dlg, text="Nova empresa")
-        form_frame.pack(fill=tk.X, padx=14, pady=6)
-        form_frame.columnconfigure(1, weight=1)
-        form_frame.columnconfigure(3, weight=1)
-
-        ttk.Label(form_frame, text="Nome").grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
-        nome_emp = ttk.Entry(form_frame, width=28)
-        nome_emp.grid(row=0, column=1, sticky="ew", padx=(4, 10), pady=6)
-
-        ttk.Label(form_frame, text="CNPJ").grid(row=0, column=2, sticky="w", padx=(10, 4), pady=6)
-        cnpj_emp = ttk.Entry(form_frame, width=18)
-        cnpj_emp.grid(row=0, column=3, sticky="ew", padx=(4, 10), pady=6)
-
-        def adicionar_empresa():
-            nome = nome_emp.get().strip()
-            cnpj = cnpj_emp.get().strip()
-            if not nome:
-                messagebox.showwarning("Aviso", "Informe o nome da empresa.", parent=dlg)
-                return
-            try:
-                self.controller.adicionar_empresa(nome, cnpj)
-                nome_emp.delete(0, tk.END)
-                cnpj_emp.delete(0, tk.END)
-                carregar_empresas_dlg()
-                self.atualizar_opcoes_empresa()
-            except Exception as e:
-                messagebox.showerror("Erro", str(e), parent=dlg)
-
-        def excluir_empresa():
-            selecionados = lista_emp.selection()
-            if not selecionados:
-                messagebox.showwarning("Aviso", "Selecione uma empresa.", parent=dlg)
-                return
-            if messagebox.askyesno("Confirmar", "Excluir empresa selecionada?", parent=dlg):
-                self.controller.excluir_empresa(selecionados[0])
-                carregar_empresas_dlg()
-                self.atualizar_opcoes_empresa()
-
-        btn_frame = ttk.Frame(dlg)
-        btn_frame.pack(fill=tk.X, padx=14, pady=(0, 14))
-        ttk.Button(btn_frame, text="Adicionar", command=adicionar_empresa).pack(side=tk.LEFT, padx=3)
-        ttk.Button(btn_frame, text="Excluir selecionada", command=excluir_empresa).pack(side=tk.LEFT, padx=3)
-        ttk.Button(btn_frame, text="Fechar", command=dlg.destroy).pack(side=tk.RIGHT, padx=3)
+        TelaCadastros(self, controller=self.controller, ao_atualizar=ao_atualizar)
 
     # ── Relatórios ────────────────────────────────────────────────────────────
 

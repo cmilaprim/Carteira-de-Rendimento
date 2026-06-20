@@ -1,88 +1,102 @@
-import json
-from datetime import date
 from decimal import Decimal
-from pathlib import Path
-from typing import Iterable
+from sqlalchemy import Engine, text
 from app.models.aplicacao import Aplicacao, Indexador, TipoProduto
 
+
 class RepositorioAplicacoes:
-    def __init__(self) -> None:
-        self.caminho = Path("data/aplicacoes.json")
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
 
     def listar(self) -> list[Aplicacao]:
-        if not self.caminho.exists() or self.caminho.stat().st_size == 0:
-            return []
-        with self.caminho.open("r", encoding="utf-8") as arquivo:
-            dados = json.load(arquivo)
-        return [self.para_aplicacao(item) for item in dados]
-
-    def salvar_todos(self, aplicacoes: Iterable[Aplicacao]) -> None:
-        dados = [self.para_dict(aplicacao) for aplicacao in aplicacoes]
-        temporario = self.caminho.with_suffix(".tmp")
-        with temporario.open("w", encoding="utf-8") as arquivo:
-            json.dump(dados, arquivo, ensure_ascii=False, indent=2)
-        temporario.replace(self.caminho)
+        with self.engine.connect() as conn:
+            resultado = conn.execute(text("""
+                SELECT f.*, b.nome AS banco_nome
+                FROM f_aplicacao f
+                LEFT JOIN d_banco b ON b.id = f.banco_id
+                ORDER BY f.data_criacao DESC
+            """))
+            return [self.para_aplicacao(linha) for linha in resultado]
 
     def adicionar(self, aplicacao: Aplicacao) -> None:
-        aplicacoes = self.listar()
-        aplicacoes.append(aplicacao)
-        self.salvar_todos(aplicacoes)
+        with self.engine.begin() as conn:
+            linha = conn.execute(text("""
+                INSERT INTO f_aplicacao (
+                    nome_produto, valor_aplicado, data_emissao, data_vencimento,
+                    indexador, percentual_indexador, taxa_prefixada_anual, spread_anual,
+                    tipo_produto, banco_id, data_resgate, empresa_id
+                ) VALUES (
+                    :nome_produto, :valor_aplicado, :data_emissao, :data_vencimento,
+                    :indexador, :percentual_indexador, :taxa_prefixada_anual, :spread_anual,
+                    :tipo_produto, :banco_id, :data_resgate, :empresa_id
+                ) RETURNING id
+            """), self.para_dict(aplicacao)).fetchone()
+            aplicacao.id = str(linha.id)
 
     def excluir(self, aplicacao_id: str) -> None:
-        aplicacoes = [item for item in self.listar() if item.id != aplicacao_id]
-        self.salvar_todos(aplicacoes)
+        with self.engine.begin() as conn:
+            conn.execute(text("DELETE FROM f_aplicacao WHERE id = :id"), {"id": int(aplicacao_id)})
 
     def obter(self, aplicacao_id: str) -> Aplicacao:
-        for aplicacao in self.listar():
-            if aplicacao.id == aplicacao_id:
-                return aplicacao
-        raise KeyError("Aplicacao nao encontrada.")
+        with self.engine.connect() as conn:
+            linha = conn.execute(text("""
+                SELECT f.*, b.nome AS banco_nome
+                FROM f_aplicacao f
+                LEFT JOIN d_banco b ON b.id = f.banco_id
+                WHERE f.id = :id
+            """), {"id": int(aplicacao_id)}).fetchone()
+        if linha is None:
+            raise KeyError("Aplicacao nao encontrada.")
+        return self.para_aplicacao(linha)
 
     def atualizar(self, aplicacao: Aplicacao) -> None:
-        aplicacoes = self.listar()
-        for indice, atual in enumerate(aplicacoes):
-            if atual.id == aplicacao.id:
-                aplicacoes[indice] = aplicacao
-                self.salvar_todos(aplicacoes)
-                return
-        raise KeyError("Aplicacao nao encontrada.")
+        with self.engine.begin() as conn:
+            conn.execute(text("""
+                UPDATE f_aplicacao SET
+                    nome_produto         = :nome_produto,
+                    valor_aplicado       = :valor_aplicado,
+                    data_emissao         = :data_emissao,
+                    data_vencimento      = :data_vencimento,
+                    indexador            = :indexador,
+                    percentual_indexador = :percentual_indexador,
+                    taxa_prefixada_anual = :taxa_prefixada_anual,
+                    spread_anual         = :spread_anual,
+                    tipo_produto         = :tipo_produto,
+                    banco_id             = :banco_id,
+                    data_resgate         = :data_resgate,
+                    empresa_id           = :empresa_id
+                WHERE id = :id
+            """), {**self.para_dict(aplicacao), "id": int(aplicacao.id)})
 
     def para_dict(self, aplicacao: Aplicacao) -> dict:
         return {
-            "versao": 2,
-            "id": aplicacao.id,
-            "nome_produto": aplicacao.nome_produto,
-            "numero_controle": aplicacao.numero_controle,
-            "numero_nota": aplicacao.numero_nota,
-            "valor_aplicado": str(aplicacao.valor_aplicado),
-            "data_emissao": aplicacao.data_emissao.isoformat(),
-            "data_vencimento": aplicacao.data_vencimento.isoformat(),
-            "indexador": aplicacao.indexador.value,
-            "percentual_indexador": str(aplicacao.percentual_indexador),
-            "taxa_prefixada_anual": None if aplicacao.taxa_prefixada_anual is None else str(aplicacao.taxa_prefixada_anual),
-            "spread_anual": None if aplicacao.spread_anual is None else str(aplicacao.spread_anual),
-            "tipo_produto": aplicacao.tipo_produto.value,
-            "banco": aplicacao.banco,
-            "empresa_id": aplicacao.empresa_id,
-            "data_resgate": aplicacao.data_resgate.isoformat() if aplicacao.data_resgate else None,
+            "nome_produto":         aplicacao.nome_produto,
+            "valor_aplicado":       float(aplicacao.valor_aplicado),
+            "data_emissao":         aplicacao.data_emissao,
+            "data_vencimento":      aplicacao.data_vencimento,
+            "indexador":            aplicacao.indexador.value,
+            "percentual_indexador": float(aplicacao.percentual_indexador),
+            "taxa_prefixada_anual": float(aplicacao.taxa_prefixada_anual) if aplicacao.taxa_prefixada_anual is not None else None,
+            "spread_anual":         float(aplicacao.spread_anual) if aplicacao.spread_anual is not None else None,
+            "tipo_produto":         aplicacao.tipo_produto.value,
+            "banco_id":             aplicacao.banco_id,
+            "data_resgate":         aplicacao.data_resgate,
+            "empresa_id":           int(aplicacao.empresa_id) if aplicacao.empresa_id else None,
         }
 
-    def para_aplicacao(self, dados: dict) -> Aplicacao:
+    def para_aplicacao(self, linha) -> Aplicacao:
         return Aplicacao(
-            id=dados["id"],
-            nome_produto=dados["nome_produto"],
-            numero_controle=dados.get("numero_controle", ""),
-            numero_nota=dados.get("numero_nota", ""),
-            valor_aplicado=Decimal(str(dados["valor_aplicado"])),
-            data_emissao=date.fromisoformat(dados["data_emissao"]),
-            data_vencimento=date.fromisoformat(dados["data_vencimento"]),
-            indexador=Indexador(dados["indexador"]),
-            percentual_indexador=Decimal(str(dados.get("percentual_indexador", "100"))),
-            taxa_prefixada_anual=None if dados.get("taxa_prefixada_anual") is None else Decimal(str(dados["taxa_prefixada_anual"])),
-            spread_anual=None if dados.get("spread_anual") is None else Decimal(str(dados["spread_anual"])),
-            tipo_produto=TipoProduto(dados.get("tipo_produto", TipoProduto.CDB.value)),
-            banco=dados.get("banco", ""),
-            empresa_id=dados.get("empresa_id", ""),
-            data_resgate=date.fromisoformat(dados["data_resgate"]) if dados.get("data_resgate") else None,
+            id=str(linha.id),
+            nome_produto=linha.nome_produto,
+            valor_aplicado=Decimal(str(linha.valor_aplicado)),
+            data_emissao=linha.data_emissao,
+            data_vencimento=linha.data_vencimento,
+            indexador=Indexador(linha.indexador),
+            percentual_indexador=Decimal(str(linha.percentual_indexador)),
+            taxa_prefixada_anual=Decimal(str(linha.taxa_prefixada_anual)) if linha.taxa_prefixada_anual is not None else None,
+            spread_anual=Decimal(str(linha.spread_anual)) if linha.spread_anual is not None else None,
+            tipo_produto=TipoProduto(linha.tipo_produto),
+            banco_id=linha.banco_id,
+            banco=linha.banco_nome or "",
+            empresa_id=str(linha.empresa_id) if linha.empresa_id else "",
+            data_resgate=linha.data_resgate if linha.data_resgate else None,
         )

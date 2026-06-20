@@ -6,9 +6,9 @@ import logging
 
 
 class MontadorDemonstrativo:
-    def __init__(self, logger):
+    def __init__(self, logger, servico_taxas):
         self.logger: logging.Logger = logger
-        self.calculadora = CalculadoraAplicacao(logger=self.logger)
+        self.calculadora = CalculadoraAplicacao(logger=self.logger, servico_taxas=servico_taxas)
 
     def montar(self, aplicacoes: list[Aplicacao], data_saldo: date, empresas: dict | None = None) -> DemonstrativoCarteira:
         self.logger.info(f"Montando demonstrativo: aplicacoes={len(aplicacoes)} data_saldo={data_saldo}")
@@ -21,7 +21,7 @@ class MontadorDemonstrativo:
                 movimentacoes.append(LinhaMovimentacao(
                     data=aplicacao.data_emissao,
                     operacao="Aplicacao",
-                    numero_nota=aplicacao.numero_nota,
+                    numero_nota="",
                     valor_resgate_bruto=aplicacao.valor_aplicado,
                     impostos=Decimal("0"),
                     valor_liquido_operacao=aplicacao.valor_aplicado,

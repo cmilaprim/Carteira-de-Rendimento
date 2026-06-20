@@ -1,31 +1,37 @@
-import json
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
+from sqlalchemy import Engine, text
+
 
 class RepositorioTaxas:
-    def __init__(self):
-        self.pasta = Path("data/taxas")
-        self.pasta.mkdir(parents=True, exist_ok=True)
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
 
     def carregar(self, indexador: str) -> dict[date, Decimal]:
-        caminho = self.caminho(indexador)
-        if not caminho.exists() or caminho.stat().st_size == 0:
-            return {}
-        with caminho.open("r", encoding="utf-8") as arquivo:
-            dados = json.load(arquivo)
-        return {date.fromisoformat(item["data"]): Decimal(str(item["valor"])) for item in dados}
+        query = text("select data, valor from f_taxa where indexador = :indexador")
+        with self.engine.connect() as conn:
+            resultado = conn.execute(query, {"indexador": indexador})
+            taxas = {}
+            for linha in resultado:
+                data = linha.data
+                valor = Decimal(str(linha.valor))
+                taxas[data] = valor
+            return taxas
 
     def salvar(self, indexador: str, taxas: dict[date, Decimal]) -> None:
-        caminho = self.caminho(indexador)
-        dados = [
-            {"data": data_taxa.isoformat(), "valor": str(valor)}
-            for data_taxa, valor in sorted(taxas.items())
-        ]
-        temporario = caminho.with_suffix(".tmp")
-        with temporario.open("w", encoding="utf-8") as arquivo:
-            json.dump(dados, arquivo, ensure_ascii=False, indent=2)
-        temporario.replace(caminho)
-
-    def caminho(self, indexador: str) -> Path:
-        return self.pasta / f"{indexador.lower()}.json"
+        registros = []
+        for data_taxa, valor in taxas.items():
+            registros.append({
+                "indexador": indexador,
+                "data": data_taxa,
+                "valor": valor,
+            })
+        
+        query=text("""
+            insert into f_taxa (indexador, data, valor)
+            values (:indexador, :data, :valor)
+            on conflict (indexador, data) do update set valor = excluded.valor
+        """)
+        
+        with self.engine.begin() as conn:
+            conn.execute(query, registros)
