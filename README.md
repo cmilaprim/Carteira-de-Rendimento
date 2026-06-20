@@ -137,6 +137,13 @@ CARTEIRA_AUTH=<usuario:senha em base64>
 
 A credencial é a string `usuario:senha` codificada em Base64.
 
+### Criar as tabelas
+Execute o script `schema.sql` no seu banco PostgreSQL:
+```bash
+psql -h <servidor> -U <usuario> -d <banco> -f schema.sql
+```
+Ou cole o conteúdo do arquivo diretamente no cliente de sua preferência (DBeaver, psql, etc.).
+
 ### Instalação
 ```bash
 pip install -r requirements.txt
