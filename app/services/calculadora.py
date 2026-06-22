@@ -101,7 +101,7 @@ class CalculadoraAplicacao:
             return self.converter_taxa_anual_para_diaria(aplicacao.taxa_prefixada_anual or Decimal("0"))
 
         maior_data_disponivel = max(taxas.keys()) if taxas else None
-        pode_usar_defasagem = data_atual in taxas or (maior_data_disponivel is not None and data_atual > maior_data_disponivel and data_atual <= date.today())
+        pode_usar_defasagem = data_atual in taxas or (maior_data_disponivel is not None and data_atual > maior_data_disponivel and data_atual <= date.today() and eh_dia_util(data_atual))
 
         if not pode_usar_defasagem:
             if projetar_com_ultima_taxa and ultima_taxa_base_diaria is not None and data_atual > date.today() and eh_dia_util(data_atual):

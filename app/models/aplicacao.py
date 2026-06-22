@@ -15,7 +15,7 @@ class TipoProduto(str, Enum):
     CDB = "CDB"
     COMPROMISSADA = "COMPROMISSADA"
     LC = "LC"
-    MUTUO = "MÚTUO"
+    MUTUO = "MUTUO"
 
 
 class Aplicacao:
